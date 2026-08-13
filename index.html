@@ -1203,72 +1203,58 @@
             }
         }
 
-        function adicionarItensSelecionadosOS() {
-            var checkboxes = document.querySelectorAll('.chk-solicitacao-os:checked');
+               function adicionarItensSelecionadosOS() {
+            var checkboxes = document.querySelectorAll(".chk-solicitacao-os:checked");
             if (checkboxes.length === 0) {
-                showToast('Selecione pelo menos um item.', 'warning');
+                showToast("Selecione pelo menos um item.", "warning");
                 return;
             }
-
             var descricoes = [];
             checkboxes.forEach(function(chk) {
-                var desc = chk.getAttribute('data-descricao');
-                var qtd = chk.getAttribute('data-qtd');
-                var prio = chk.getAttribute('data-prioridade');
-                descricoes.push(qtd + 'x ' + desc + ' (' + prio + ')');
-
+                var desc = chk.getAttribute("data-descricao");
+                var qtd = chk.getAttribute("data-qtd");
+                var prio = chk.getAttribute("data-prioridade");
+                descricoes.push(qtd + "x " + desc + " (" + prio + ")");
                 solicitacoesSelecionadasOS.push({
-                    solicitacaoId: chk.getAttribute('data-solicitacao-id'),
-                    itemIndex: Number(chk.getAttribute('data-item-index')),
+                    solicitacaoId: chk.getAttribute("data-solicitacao-id"),
+                    itemIndex: Number(chk.getAttribute("data-item-index")),
                     descricao: desc,
                     qtd: Number(qtd),
                     prioridade: prio
                 });
             });
-
-            // Atualiza descrição da OS
-            var descAtual = document.getElementById('m-desc').value.trim();
-            var novaDesc = 'Solicitação do gerente: ' + descricoes.join('; ');
-            document.getElementById('m-desc').value = descAtual ? descAtual + ' | ' + novaDesc : novaDesc;
-
-            // Define prioridade mais alta entre os itens
-            var prioridades = Array.from(checkboxes).map(function(c) { return c.getAttribute('data-prioridade'); });
-            if (prioridades.includes('Urgente')) document.getElementById('m-prio').value = 'Urgente';
-            else if (prioridades.includes('Alta')) document.getElementById('m-prio').value = 'Alta';
-            else if (prioridades.includes('Média')) document.getElementById('m-prio').value = 'Média';
-
-            showToast(checkboxes.length + ' item(s) adicionado(s) à OS!');
-
-            // Desmarca checkboxes
+            var descAtual = document.getElementById("m-desc").value.trim();
+            var novaDesc = "Solicitação do gerente: " + descricoes.join("; ");
+            document.getElementById("m-desc").value = descAtual ? descAtual + " | " + novaDesc : novaDesc;
+            var prioridades = Array.from(checkboxes).map(function(c) { return c.getAttribute("data-prioridade"); });
+            if (prioridades.includes("Urgente")) document.getElementById("m-prio").value = "Urgente";
+            else if (prioridades.includes("Alta")) document.getElementById("m-prio").value = "Alta";
+            else if (prioridades.includes("Média")) document.getElementById("m-prio").value = "Média";
+            showToast(checkboxes.length + " item(s) adicionado(s) à OS!");
             checkboxes.forEach(function(chk) { chk.checked = false; });
         }
 
         // ====== DASHBOARD ======
         function renderDashboard() {
-            var pendentes = window.maintenanceData.filter(function(m) { return m.status !== 'Concluído'; }).length;
-            var concluidas = window.maintenanceData.filter(function(m) { return m.status === 'Concluído'; }).length;
-            var compras = window.stockData.filter(function(s) { return s.qtd <= s.min; }).length;
-            var solicitacoesPendentes = window.solicitacoesData.filter(function(s) { return s.statusGeral !== 'Concluido'; }).length;
-
-            document.getElementById('dash-pendentes').textContent = pendentes;
-            document.getElementById('dash-concluidas').textContent = concluidas;
-            document.getElementById('dash-compras') && (document.getElementById('dash-compras').textContent = compras);
-            var elSol = document.getElementById('dash-solicitacoes');
+            var pendentes = window.maintenanceData.filter(function(m) { return m.status !== "Concluído"; }).length;
+            var concluidas = window.maintenanceData.filter(function(m) { return m.status === "Concluído"; }).length;
+            var solicitacoesPendentes = window.solicitacoesData.filter(function(s) { return s.statusGeral !== "Concluido"; }).length;
+            document.getElementById("dash-pendentes").textContent = pendentes;
+            document.getElementById("dash-concluidas").textContent = concluidas;
+            var elSol = document.getElementById("dash-solicitacoes");
             if (elSol) elSol.textContent = solicitacoesPendentes;
-
-            // Solicitações recentes no dashboard
-            var recentesContainer = document.getElementById('dash-solicitacoes-recentes');
+            var recentesContainer = document.getElementById("dash-solicitacoes-recentes");
             if (recentesContainer) {
-                recentesContainer.innerHTML = '';
+                recentesContainer.innerHTML = "";
                 var recentes = window.solicitacoesData
-                    .filter(function(s) { return s.statusGeral !== 'Concluido'; })
+                    .filter(function(s) { return s.statusGeral !== "Concluido"; })
                     .sort(function(a, b) { return new Date(b.dataSolicitacao) - new Date(a.dataSolicitacao); })
                     .slice(0, 5);
                 if (recentes.length === 0) {
                     recentesContainer.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhuma solicitação pendente.</p>';
                 } else {
                     recentes.forEach(function(s) {
-                        var data = new Date(s.dataSolicitacao).toLocaleDateString('pt-BR');
+                        var data = new Date(s.dataSolicitacao).toLocaleDateString("pt-BR");
                         var qtdItens = (s.itens || []).length;
                         recentesContainer.innerHTML += '<div class="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-100">' +
                             '<div class="flex items-center gap-2"><span class="text-xs font-bold text-slate-700">' + s.filialId + '</span>' +
@@ -1277,11 +1263,9 @@
                     });
                 }
             }
-
-            // Insumos em alerta no dashboard
-            var alertaContainer = document.getElementById('dash-insumos-alerta');
+            var alertaContainer = document.getElementById("dash-insumos-alerta");
             if (alertaContainer) {
-                alertaContainer.innerHTML = '';
+                alertaContainer.innerHTML = "";
                 var alertas = window.stockData.filter(function(s) { return s.qtd <= s.min; }).slice(0, 5);
                 if (alertas.length === 0) {
                     alertaContainer.innerHTML = '<p class="text-xs text-emerald-600 text-center py-2">✅ Todos os insumos OK</p>';
@@ -1297,57 +1281,50 @@
 
         // ====== RELATÓRIO DETALHADO ======
         function renderRelatorioDetalhado() {
-            var container = document.getElementById('relatorio-detalhado-conteudo');
-            var filtroEl = document.getElementById('rel-detal-filial');
+            var container = document.getElementById("relatorio-detalhado-conteudo");
+            var filtroEl = document.getElementById("rel-detal-filial");
             if (!container) return;
-            container.innerHTML = '';
-
-            var filtro = filtroEl ? filtroEl.value : '';
+            container.innerHTML = "";
+            var filtro = filtroEl ? filtroEl.value : "";
             var filiaisParaRel = filtro ? [filtro] : FILIAIS;
-
             filiaisParaRel.forEach(function(f) {
                 var sols = window.solicitacoesData.filter(function(s) { return s.filialId === f; });
                 var oss = window.maintenanceData.filter(function(m) { return m.filialId === f; });
-                var pendentes = oss.filter(function(m) { return m.status !== 'Concluído'; });
-                var concluidas = oss.filter(function(m) { return m.status === 'Concluído'; });
+                var pendentes = oss.filter(function(m) { return m.status !== "Concluído"; });
+                var concluidas = oss.filter(function(m) { return m.status === "Concluído"; });
                 var isTc = isTcase(f);
-
                 var totalItensSolicitados = 0;
                 var totalItensAtendidos = 0;
                 var totalItensEmOS = 0;
                 sols.forEach(function(s) {
                     (s.itens || []).forEach(function(it) {
                         totalItensSolicitados++;
-                        if (it.status === 'Atendido') totalItensAtendidos++;
-                        else if (it.status === 'Em OS') totalItensEmOS++;
+                        if (it.status === "Atendido") totalItensAtendidos++;
+                        else if (it.status === "Em OS") totalItensEmOS++;
                     });
                 });
-
                 var taxaAtendimento = totalItensSolicitados > 0 ? Math.round((totalItensAtendidos / totalItensSolicitados) * 100) : 0;
-
-                var osHtml = '';
+                var osHtml = "";
                 concluidas.slice(0, 5).forEach(function(os) {
                     osHtml += '<div class="text-[11px] text-slate-600 pl-3 border-l-2 border-emerald-300">' +
-                        '<strong>' + os.descricao + '</strong> — ' + (os.dataConclusao || '-') +
-                        (os.relatorio ? '<p class="text-slate-400 italic mt-0.5">"' + os.relatorio + '"</p>' : '') +
-                        '</div>';
+                        '<strong>' + os.descricao + '</strong> — ' + (os.dataConclusao || "-") +
+                        (os.relatorio ? '<p class="text-slate-400 italic mt-0.5">"' + os.relatorio + '"</p>' : "") +
+                        "</div>";
                 });
-
-                var solHtml = '';
+                var solHtml = "";
                 sols.slice(0, 5).forEach(function(s) {
                     var itens = (s.itens || []).map(function(it) {
-                        var st = it.status === 'Atendido' ? '✅' : it.status === 'Em OS' ? '⏳' : '⏸️';
-                        return st + ' ' + it.qtd + 'x ' + it.descricao;
-                    }).join(', ');
+                        var st = it.status === "Atendido" ? "✅" : it.status === "Em OS" ? "⏳" : "⏸️";
+                        return st + " " + it.qtd + "x " + it.descricao;
+                    }).join(", ");
                     solHtml += '<div class="text-[11px] text-slate-600 pl-3 border-l-2 border-indigo-300">' +
-                        '<span class="font-semibold">' + new Date(s.dataSolicitacao).toLocaleDateString('pt-BR') + ':</span> ' + itens + '</div>';
+                        '<span class="font-semibold">' + new Date(s.dataSolicitacao).toLocaleDateString("pt-BR") + ":</span> " + itens + "</div>";
                 });
-
                 container.innerHTML += '<div class="bg-white rounded-xl shadow-sm border p-5 fade-in">' +
                     '<div class="flex items-center justify-between mb-4 pb-2 border-b">' +
                     '<div class="flex items-center gap-2">' +
                     '<span class="font-bold text-sm text-slate-800">' + f + '</span>' +
-                    (isTc ? '<span class="text-[9px] bg-[#8cc63f] text-black font-extrabold px-1.5 py-0.5 rounded">T-CASE</span>' : '') +
+                    (isTc ? '<span class="text-[9px] bg-[#8cc63f] text-black font-extrabold px-1.5 py-0.5 rounded">T-CASE</span>' : "") +
                     '</div>' +
                     '<div class="flex gap-3 text-[10px] font-bold">' +
                     '<span class="text-indigo-600">Solicitações: ' + sols.length + '</span>' +
@@ -1366,35 +1343,33 @@
                     '<div class="mt-3 pt-3 border-t flex items-center gap-4">' +
                     '<div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">' +
                     '<div class="bg-emerald-500 h-full rounded-full" style="width:' + taxaAtendimento + '%"></div></div>' +
-                    '<span class="text-[10px] font-bold text-slate-600">Taxa de Atendimento: ' + taxaAtendimento + '%</span>' +
-                    '</div></div>';
+                    '<span class="text-[10px] font-bold text-slate-600">Taxa de Atendimento: ' + taxaAtendimento + "%</span>" +
+                    "</div></div>";
             });
         }
 
         function printRelatorioDetalhado() {
-            var container = document.getElementById('print-rel-conteudo');
-            var dataEl = document.getElementById('print-rel-data');
-            dataEl.textContent = 'Gerado em: ' + new Date().toLocaleDateString('pt-BR');
-            container.innerHTML = document.getElementById('relatorio-detalhado-conteudo').innerHTML;
-            var printable = document.getElementById('printable-relatorio');
-            printable.classList.remove('hidden');
+            var container = document.getElementById("print-rel-conteudo");
+            var dataEl = document.getElementById("print-rel-data");
+            dataEl.textContent = "Gerado em: " + new Date().toLocaleDateString("pt-BR");
+            container.innerHTML = document.getElementById("relatorio-detalhado-conteudo").innerHTML;
+            var printable = document.getElementById("printable-relatorio");
+            printable.classList.remove("hidden");
             window.print();
-            setTimeout(function() { printable.classList.add('hidden'); }, 500);
+            setTimeout(function() { printable.classList.add("hidden"); }, 500);
         }
 
         // ====== GERENTE LINKS ======
         function renderGerenteLinks() {
-            var grid = document.getElementById('gerente-links-grid');
+            var grid = document.getElementById("gerente-links-grid");
             if (!grid) return;
-            grid.innerHTML = '';
+            grid.innerHTML = "";
             var baseUrl = window.location.origin + window.location.pathname;
-
             FILIAIS.forEach(function(f) {
-                var mgr = window.managersData[f] || { nome: 'Não Cadastrado' };
-                var link = baseUrl + '?modo=gerente&filial=' + encodeURIComponent(f);
+                var mgr = window.managersData[f] || { nome: "Não Cadastrado" };
+                var link = baseUrl + "?modo=gerente&filial=" + encodeURIComponent(f);
                 var isTc = isTcase(f);
-                var badgeClass = isTc ? 'bg-[#8cc63f] text-black' : 'bg-slate-900 text-mob-teal';
-
+                var badgeClass = isTc ? "bg-[#8cc63f] text-black" : "bg-slate-900 text-mob-teal";
                 grid.innerHTML += '<div class="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">' +
                     '<div class="flex items-center justify-between">' +
                     '<span class="font-bold text-xs px-2 py-0.5 rounded ' + badgeClass + '">' + f + '</span>' +
@@ -1402,49 +1377,45 @@
                     '</div>' +
                     '<div class="flex gap-1">' +
                     '<input type="text" value="' + link + '" readonly class="flex-1 text-[10px] bg-white border border-slate-300 rounded px-2 py-1 truncate">' +
-                    '<button onclick="copiarLinkGerente(\'' + link + '\')" class="bg-mob-dark text-white text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-800">' +
+                    '<button onclick="copiarLinkGerente(this)" data-link="' + link + '" class="bg-mob-dark text-white text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-800">' +
                     '<i class="fa-solid fa-copy"></i></button>' +
                     '</div></div>';
             });
         }
 
-        function copiarLinkGerente(link) {
+        function copiarLinkGerente(btn) {
+            var link = btn.getAttribute("data-link");
             navigator.clipboard.writeText(link).then(function() {
-                showToast('Link copiado para a área de transferência!');
+                showToast("Link copiado para a área de transferência!");
             }).catch(function() {
-                // Fallback
-                var ta = document.createElement('textarea');
+                var ta = document.createElement("textarea");
                 ta.value = link;
                 document.body.appendChild(ta);
                 ta.select();
-                document.execCommand('copy');
+                document.execCommand("copy");
                 document.body.removeChild(ta);
-                showToast('Link copiado!');
+                showToast("Link copiado!");
             });
         }
 
         function addStockItemToOrder() {
-            var sel = document.getElementById('m-estoque-item');
-            var qtdInput = document.getElementById('m-estoque-qtd');
+            var sel = document.getElementById("m-estoque-item");
+            var qtdInput = document.getElementById("m-estoque-qtd");
             var selectedOpt = sel.options[sel.selectedIndex];
             if (!sel.value) return;
-
             var itemId = sel.value;
-            var itemNome = selectedOpt.getAttribute('data-nome');
-            var qtdDisp = Number(selectedOpt.getAttribute('data-qtd') || 0);
+            var itemNome = selectedOpt.getAttribute("data-nome");
+            var qtdDisp = Number(selectedOpt.getAttribute("data-qtd") || 0);
             var qtdPedida = Number(qtdInput.value || 1);
-
             currentOrderStockItems.push({
                 id: itemId,
                 nome: itemNome,
                 qtd: qtdPedida,
                 semEstoque: qtdPedida > qtdDisp
             });
-
             if (qtdPedida > qtdDisp) {
-                showToast('Atenção: ' + itemNome + ' possui apenas ' + qtdDisp + ' unidades em estoque!', 'warning');
+                showToast("Atenção: " + itemNome + " possui apenas " + qtdDisp + " unidades em estoque!", "warning");
             }
-
             renderSelectedItems();
             sel.value = "";
             qtdInput.value = 1;
@@ -1456,10 +1427,10 @@
         }
 
         function renderSelectedItems() {
-            var listContainer = document.getElementById('selected-items-list');
-            listContainer.innerHTML = '';
+            var listContainer = document.getElementById("selected-items-list");
+            listContainer.innerHTML = "";
             currentOrderStockItems.forEach(function(item, index) {
-                var warning = item.semEstoque ? ' <span class="text-amber-600 font-bold">(⚠️ Insuficiente)</span>' : '';
+                var warning = item.semEstoque ? ' <span class="text-amber-600 font-bold">(⚠️ Insuficiente)</span>' : "";
                 listContainer.innerHTML += '<div class="flex items-center justify-between bg-slate-100 p-2 rounded text-xs border border-slate-200 fade-in"><span><b>' + item.qtd + 'x</b> ' + item.nome + warning + '</span><button type="button" onclick="removeStockItemFromOrder(' + index + ')" class="text-rose-600 font-bold hover:underline">Remover</button></div>';
             });
         }
@@ -1469,70 +1440,59 @@
         }
 
         function renderFilialDetail() {
-            var filial = document.getElementById('select-filial-filtro').value;
-            var tbPendentes = document.getElementById('tb-pendentes-filial');
-            var tbConcluidos = document.getElementById('tb-concluidos-filial');
+            var filial = document.getElementById("select-filial-filtro").value;
+            var tbPendentes = document.getElementById("tb-pendentes-filial");
+            var tbConcluidos = document.getElementById("tb-concluidos-filial");
             if (!tbPendentes || !tbConcluidos) return;
-
-            tbPendentes.innerHTML = '';
-            tbConcluidos.innerHTML = '';
-
+            tbPendentes.innerHTML = "";
+            tbConcluidos.innerHTML = "";
             var items = window.maintenanceData.filter(function(m) { return m.filialId === filial; });
-
-            var pendentes = items.filter(function(m) { return m.status !== 'Concluído'; }).sort(function(a, b) {
+            var pendentes = items.filter(function(m) { return m.status !== "Concluído"; }).sort(function(a, b) {
                 return (PRIORIDADE_ORDEM[b.prioridade] || 0) - (PRIORIDADE_ORDEM[a.prioridade] || 0);
             });
-
             pendentes.forEach(function(m) {
-                var insumosTxt = m.items && m.items.length > 0 
-                    ? m.items.map(function(i) { return i.qtd + 'x ' + i.nome; }).join(', ') 
+                var insumosTxt = m.items && m.items.length > 0
+                    ? m.items.map(function(i) { return i.qtd + "x " + i.nome; }).join(", ")
                     : '<span class="text-slate-400">Nenhum</span>';
-
                 var prioColor = {
                     "Urgente": "bg-rose-100 text-rose-800",
                     "Alta": "bg-orange-100 text-orange-800",
                     "Média": "bg-amber-100 text-amber-800",
                     "Baixa": "bg-slate-100 text-slate-600"
                 }[m.prioridade] || "bg-amber-100 text-amber-800";
-
-                tbPendentes.innerHTML += '<tr class="fade-in"><td class="p-2 font-semibold text-slate-800">' + m.descricao + '<span class="ml-1 text-[9px] font-bold px-1.5 py-0.5 rounded ' + prioColor + '">' + m.prioridade + '</span></td><td class="p-2 text-slate-600">' + insumosTxt + '</td><td class="p-2 text-center"><span class="bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded text-[10px]">PENDENTE</span></td><td class="p-2 text-right space-x-1"><button onclick="openCompleteModal(\'' + m.id + '\')" class="text-emerald-600 font-bold hover:underline">Concluir</button><span class="text-slate-300">|</span><button onclick="printOS(\'' + m.id + '\')" class="text-indigo-600 font-bold hover:underline"><i class="fa-solid fa-print"></i> OS</button><span class="text-slate-300">|</span><button onclick="deleteDocItem(\'mob_manutencao\', \' + m.id + ')" class="text-rose-500 font-semibold">Excluir</button></td></tr>';
+                tbPendentes.innerHTML += '<tr class="fade-in"><td class="p-2 font-semibold text-slate-800">' + m.descricao + '<span class="ml-1 text-[9px] font-bold px-1.5 py-0.5 rounded ' + prioColor + '">' + m.prioridade + '</span></td><td class="p-2 text-slate-600">' + insumosTxt + '</td><td class="p-2 text-center"><span class="bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded text-[10px]">PENDENTE</span></td><td class="p-2 text-right space-x-1"><button onclick="openCompleteModal(\'' + m.id + '\')" class="text-emerald-600 font-bold hover:underline">Concluir</button><span class="text-slate-300">|</span><button onclick="printOS(\'' + m.id + '\')" class="text-indigo-600 font-bold hover:underline"><i class="fa-solid fa-print"></i> OS</button><span class="text-slate-300">|</span><button onclick="deleteDocItem(\'mob_manutencao\', \'' + m.id + '\')" class="text-rose-500 font-semibold">Excluir</button></td></tr>';
             });
-
-            var concluidos = items.filter(function(m) { return m.status === 'Concluído'; }).sort(function(a, b) {
+            var concluidos = items.filter(function(m) { return m.status === "Concluído"; }).sort(function(a, b) {
                 var dateA = parseBRDate(a.dataConclusao);
                 var dateB = parseBRDate(b.dataConclusao);
                 return dateB - dateA;
             });
-
             concluidos.forEach(function(m) {
-                var relatorioHtml = m.relatorio 
-                    ? '<div class="mt-1 text-[10px] text-slate-500 bg-slate-50 p-1.5 rounded border border-slate-100 italic">"' + m.relatorio + '"</div>' 
-                    : '';
-                tbConcluidos.innerHTML += '<tr class="fade-in"><td class="p-2"><span class="font-semibold text-slate-700">' + m.descricao + '</span>' + relatorioHtml + '</td><td class="p-2 text-center font-bold text-slate-500">' + (m.dataConclusao || '-') + '</td><td class="p-2 text-right"><button onclick="deleteDocItem(\'mob_manutencao\', \' + m.id + ')" class="text-rose-500 font-semibold">Excluir</button></td></tr>';
+                var relatorioHtml = m.relatorio
+                    ? '<div class="mt-1 text-[10px] text-slate-500 bg-slate-50 p-1.5 rounded border border-slate-100 italic">"' + m.relatorio + '"</div>'
+                    : "";
+                tbConcluidos.innerHTML += '<tr class="fade-in"><td class="p-2"><span class="font-semibold text-slate-700">' + m.descricao + '</span>' + relatorioHtml + '</td><td class="p-2 text-center font-bold text-slate-500">' + (m.dataConclusao || "-") + '</td><td class="p-2 text-right"><button onclick="deleteDocItem(\'mob_manutencao\', \'' + m.id + '\')" class="text-rose-500 font-semibold">Excluir</button></td></tr>';
             });
-
-            if (tbPendentes.innerHTML === '') tbPendentes.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-slate-400">Nenhuma pendência cadastrada para esta filial.</td></tr>';
-            if (tbConcluidos.innerHTML === '') tbConcluidos.innerHTML = '<tr><td colspan="3" class="p-3 text-center text-slate-400">Nenhum histórico concluído.</td></tr>';
+            if (tbPendentes.innerHTML === "") tbPendentes.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-slate-400">Nenhuma pendência cadastrada para esta filial.</td></tr>';
+            if (tbConcluidos.innerHTML === "") tbConcluidos.innerHTML = '<tr><td colspan="3" class="p-3 text-center text-slate-400">Nenhum histórico concluído.</td></tr>';
         }
 
         function parseBRDate(dateStr) {
             if (!dateStr) return new Date(0);
-            var parts = dateStr.split('/');
-            return new Date(parts[2] + '-' + parts[1] + '-' + parts[0]);
+            var parts = dateStr.split("/");
+            return new Date(parts[2] + "-" + parts[1] + "-" + parts[0]);
         }
 
         async function saveMaintenance(e) {
             e.preventDefault();
-            var btn = document.getElementById('btn-save-maintenance');
+            var btn = document.getElementById("btn-save-maintenance");
             var originalText = btn.textContent;
-            btn.textContent = 'Salvando...';
+            btn.textContent = "Salvando...";
             btn.disabled = true;
             try {
-                var filialId = document.getElementById('m-filial').value;
-                var descricao = document.getElementById('m-desc').value;
-                var prioridade = document.getElementById('m-prio').value;
-
-                // Cria a OS
+                var filialId = document.getElementById("m-filial").value;
+                var descricao = document.getElementById("m-desc").value;
+                var prioridade = document.getElementById("m-prio").value;
                 var osRef = await window.addDoc(window.collection(window.db, "mob_manutencao"), {
                     filialId: filialId,
                     descricao: descricao,
@@ -1541,8 +1501,6 @@
                     status: "Pendente",
                     dataCriacao: new Date().toISOString()
                 });
-
-                // Atualiza status dos itens das solicitações vinculadas
                 if (solicitacoesSelecionadasOS.length > 0) {
                     var solicitacoesAfetadas = {};
                     solicitacoesSelecionadasOS.forEach(function(sel) {
@@ -1551,34 +1509,32 @@
                         }
                         solicitacoesAfetadas[sel.solicitacaoId].push(sel.itemIndex);
                     });
-
                     for (var solId in solicitacoesAfetadas) {
                         var sol = window.solicitacoesData.find(function(s) { return s.id === solId; });
                         if (sol) {
                             var novosItens = sol.itens.map(function(it, idx) {
                                 if (solicitacoesAfetadas[solId].includes(idx)) {
-                                    return { ...it, status: 'Em OS', osId: osRef.id };
+                                    return { ...it, status: "Em OS", osId: osRef.id };
                                 }
                                 return it;
                             });
-                            var todosAtendidos = novosItens.every(function(it) { return it.status === 'Atendido' || it.status === 'Em OS'; });
+                            var todosAtendidos = novosItens.every(function(it) { return it.status === "Atendido" || it.status === "Em OS"; });
                             await window.updateDoc(window.doc(window.db, "mob_solicitacoes", solId), {
                                 itens: novosItens,
-                                statusGeral: todosAtendidos ? 'Parcial' : 'Pendente',
+                                statusGeral: todosAtendidos ? "Parcial" : "Pendente",
                                 osVinculada: osRef.id
                             });
                         }
                     }
                 }
-
                 currentOrderStockItems = [];
                 solicitacoesSelecionadasOS = [];
                 renderSelectedItems();
-                closeModal('modal-maintenance');
-                document.getElementById('m-desc').value = '';
-                showToast('Ordem de manutenção criada com sucesso!');
+                closeModal("modal-maintenance");
+                document.getElementById("m-desc").value = "";
+                showToast("Ordem de manutenção criada com sucesso!");
             } catch (err) {
-                alert('Erro ao salvar ordem: ' + err.message);
+                alert("Erro ao salvar ordem: " + err.message);
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;
@@ -1586,22 +1542,21 @@
         }
 
         function openCompleteModal(id) {
-            document.getElementById('complete-item-id').value = id;
-            document.getElementById('complete-date').valueAsDate = new Date();
-            document.getElementById('complete-relatorio').value = '';
-            openModal('modal-complete');
+            document.getElementById("complete-item-id").value = id;
+            document.getElementById("complete-date").valueAsDate = new Date();
+            document.getElementById("complete-relatorio").value = "";
+            openModal("modal-complete");
         }
 
         async function confirmCompletion(e) {
             e.preventDefault();
-            var id = document.getElementById('complete-item-id').value;
-            var dateStr = new Date(document.getElementById('complete-date').value).toLocaleDateString('pt-BR');
-            var relatorio = document.getElementById('complete-relatorio').value.trim();
-            var btn = document.getElementById('btn-complete');
+            var id = document.getElementById("complete-item-id").value;
+            var dateStr = new Date(document.getElementById("complete-date").value).toLocaleDateString("pt-BR");
+            var relatorio = document.getElementById("complete-relatorio").value.trim();
+            var btn = document.getElementById("btn-complete");
             var originalText = btn.textContent;
-            btn.textContent = 'Processando...';
+            btn.textContent = "Processando...";
             btn.disabled = true;
-
             try {
                 var order = window.maintenanceData.find(function(m) { return m.id === id; });
                 if (order && order.items && order.items.length > 0) {
@@ -1609,10 +1564,9 @@
                     order.items.forEach(function(item) {
                         var stockProduct = window.stockData.find(function(s) { return s.id === item.id; });
                         if (stockProduct && item.qtd > stockProduct.qtd) {
-                            estoqueInsuficiente.push(item.nome + ' (faltam ' + (item.qtd - stockProduct.qtd) + ' un.)');
+                            estoqueInsuficiente.push(item.nome + " (faltam " + (item.qtd - stockProduct.qtd) + " un.)");
                         }
                     });
-
                     if (estoqueInsuficiente.length > 0) {
                         var confirmar = confirm("⚠️ Atenção: os seguintes insumos estão com estoque insuficiente para baixa:\n\n" + estoqueInsuficiente.join("\n") + "\n\nDeseja continuar mesmo assim? (A baixa será feita até o limite disponível)");
                         if (!confirmar) {
@@ -1621,7 +1575,6 @@
                             return;
                         }
                     }
-
                     for (var i = 0; i < order.items.length; i++) {
                         var item = order.items[i];
                         var stockProduct = window.stockData.find(function(s) { return s.id === item.id; });
@@ -1631,42 +1584,38 @@
                         }
                     }
                 }
-
                 await window.updateDoc(window.doc(window.db, "mob_manutencao", id), {
                     status: "Concluído",
                     dataConclusao: dateStr,
                     relatorio: relatorio
                 });
-
-                // Atualiza solicitações vinculadas: marca itens como Atendidos
-                var solsDaFilial = window.solicitacoesData.filter(function(s) { 
-                    return s.filialId === order.filialId; 
+                var solsDaFilial = window.solicitacoesData.filter(function(s) {
+                    return s.filialId === order.filialId;
                 });
                 for (var j = 0; j < solsDaFilial.length; j++) {
                     var sol = solsDaFilial[j];
                     var temItemNestaOS = false;
                     var novosItens = sol.itens.map(function(it) {
-                        if (it.osId === id && it.status === 'Em OS') {
+                        if (it.osId === id && it.status === "Em OS") {
                             temItemNestaOS = true;
-                            return { ...it, status: 'Atendido' };
+                            return { ...it, status: "Atendido" };
                         }
                         return it;
                     });
                     if (temItemNestaOS) {
-                        var todosAtendidos = novosItens.every(function(it) { 
-                            return it.status === 'Atendido'; 
+                        var todosAtendidos = novosItens.every(function(it) {
+                            return it.status === "Atendido";
                         });
                         await window.updateDoc(window.doc(window.db, "mob_solicitacoes", sol.id), {
                             itens: novosItens,
-                            statusGeral: todosAtendidos ? 'Concluido' : 'Parcial'
+                            statusGeral: todosAtendidos ? "Concluido" : "Parcial"
                         });
                     }
                 }
-
-                closeModal('modal-complete');
-                showToast('Serviço concluído e estoque atualizado!');
+                closeModal("modal-complete");
+                showToast("Serviço concluído e estoque atualizado!");
             } catch (err) {
-                alert('Erro ao concluir ordem: ' + err.message);
+                alert("Erro ao concluir ordem: " + err.message);
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;
@@ -1674,57 +1623,57 @@
         }
 
         function openStockModal(itemId) {
-            var title = document.getElementById('stock-modal-title');
-            var btn = document.getElementById('btn-save-stock');
+            var title = document.getElementById("stock-modal-title");
+            var btn = document.getElementById("btn-save-stock");
             if (itemId) {
                 var item = window.stockData.find(function(s) { return s.id === itemId; });
                 if (!item) return;
-                title.textContent = 'Editar Insumo do Estoque';
-                btn.textContent = 'Atualizar Item';
-                document.getElementById('st-id').value = item.id;
-                document.getElementById('st-nome').value = item.nome;
-                document.getElementById('st-cat').value = item.categoria;
-                document.getElementById('st-qtd').value = item.qtd;
-                document.getElementById('st-min').value = item.min;
+                title.textContent = "Editar Insumo do Estoque";
+                btn.textContent = "Atualizar Item";
+                document.getElementById("st-id").value = item.id;
+                document.getElementById("st-nome").value = item.nome;
+                document.getElementById("st-cat").value = item.categoria;
+                document.getElementById("st-qtd").value = item.qtd;
+                document.getElementById("st-min").value = item.min;
             } else {
-                title.textContent = 'Cadastrar Insumo no Estoque';
-                btn.textContent = 'Salvar Item';
-                document.getElementById('st-id').value = '';
-                document.getElementById('st-nome').value = '';
-                document.getElementById('st-cat').value = '';
-                document.getElementById('st-qtd').value = '';
-                document.getElementById('st-min').value = '';
+                title.textContent = "Cadastrar Insumo no Estoque";
+                btn.textContent = "Salvar Item";
+                document.getElementById("st-id").value = "";
+                document.getElementById("st-nome").value = "";
+                document.getElementById("st-cat").value = "";
+                document.getElementById("st-qtd").value = "";
+                document.getElementById("st-min").value = "";
             }
-            openModal('modal-stock');
+            openModal("modal-stock");
         }
 
         async function saveStock(e) {
             e.preventDefault();
-            var btn = document.getElementById('btn-save-stock');
+            var btn = document.getElementById("btn-save-stock");
             var originalText = btn.textContent;
-            btn.textContent = 'Salvando...';
+            btn.textContent = "Salvando...";
             btn.disabled = true;
             try {
-                var id = document.getElementById('st-id').value;
-                var nome = document.getElementById('st-nome').value.trim();
-                var categoria = document.getElementById('st-cat').value.trim();
-                var qtd = Number(document.getElementById('st-qtd').value);
-                var min = Number(document.getElementById('st-min').value);
+                var id = document.getElementById("st-id").value;
+                var nome = document.getElementById("st-nome").value.trim();
+                var categoria = document.getElementById("st-cat").value.trim();
+                var qtd = Number(document.getElementById("st-qtd").value);
+                var min = Number(document.getElementById("st-min").value);
                 if (!nome || !categoria || isNaN(qtd) || isNaN(min)) {
-                    alert('Preencha todos os campos corretamente.');
+                    alert("Preencha todos os campos corretamente.");
                     return;
                 }
                 var payload = { nome: nome, categoria: categoria, qtd: qtd, min: min };
                 if (id) {
                     await window.updateDoc(window.doc(window.db, "mob_estoque", id), payload);
-                    showToast('Item atualizado com sucesso!');
+                    showToast("Item atualizado com sucesso!");
                 } else {
                     await window.addDoc(window.collection(window.db, "mob_estoque"), payload);
-                    showToast('Item cadastrado com sucesso!');
+                    showToast("Item cadastrado com sucesso!");
                 }
-                closeModal('modal-stock');
+                closeModal("modal-stock");
             } catch (err) {
-                alert('Erro ao salvar insumo: ' + err.message);
+                alert("Erro ao salvar insumo: " + err.message);
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;
@@ -1732,31 +1681,26 @@
         }
 
         function renderStock() {
-            var tbody = document.getElementById('stock-table-body');
-            var sugestaoBox = document.getElementById('sugestao-compra-list');
-            var searchInput = document.getElementById('stock-search');
-            var searchTerm = searchInput ? (searchInput.value || '').toLowerCase() : '';
+            var tbody = document.getElementById("stock-table-body");
+            var sugestaoBox = document.getElementById("sugestao-compra-list");
+            var searchInput = document.getElementById("stock-search");
+            var searchTerm = searchInput ? (searchInput.value || "").toLowerCase() : "";
             if (!tbody || !sugestaoBox) return;
-
-            tbody.innerHTML = '';
-            sugestaoBox.innerHTML = '';
+            tbody.innerHTML = "";
+            sugestaoBox.innerHTML = "";
             var emAlerta = false;
-
             var filteredData = window.stockData.filter(function(s) {
                 if (!searchTerm) return true;
                 return s.nome.toLowerCase().includes(searchTerm) || s.categoria.toLowerCase().includes(searchTerm);
             });
-
             filteredData.forEach(function(s) {
                 var isLow = s.qtd <= s.min;
-                tbody.innerHTML += '<tr class="hover:bg-slate-50 fade-in"><td class="p-3 font-semibold text-slate-800">' + s.nome + '</td><td class="p-3 text-slate-500">' + s.categoria + '</td><td class="p-3 text-center font-bold ' + (isLow ? 'text-rose-600' : 'text-slate-800') + '">' + s.qtd + '</td><td class="p-3 text-center text-slate-500">' + s.min + '</td><td class="p-3 text-center">' + (isLow ? '<span class="bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded text-[10px]">🚨 REPOR</span>' : '<span class="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded text-[10px]">✅ OK</span>') + '</td><td class="p-3 text-right space-x-2"><button onclick="openStockModal(\'' + s.id + '\')" class="text-indigo-600 font-semibold hover:underline">Editar</button><span class="text-slate-300">|</span><button onclick="deleteDocItem(\'mob_estoque\', \' + s.id + ')" class="text-rose-500 font-semibold">Excluir</button></td></tr>';
-
+                tbody.innerHTML += '<tr class="hover:bg-slate-50 fade-in"><td class="p-3 font-semibold text-slate-800">' + s.nome + '</td><td class="p-3 text-slate-500">' + s.categoria + '</td><td class="p-3 text-center font-bold ' + (isLow ? "text-rose-600" : "text-slate-800") + '">' + s.qtd + '</td><td class="p-3 text-center text-slate-500">' + s.min + '</td><td class="p-3 text-center">' + (isLow ? '<span class="bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded text-[10px]">🚨 REPOR</span>' : '<span class="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded text-[10px]">✅ OK</span>') + '</td><td class="p-3 text-right space-x-2"><button onclick="openStockModal(\'' + s.id + '\')" class="text-indigo-600 font-semibold hover:underline">Editar</button><span class="text-slate-300">|</span><button onclick="deleteDocItem(\'mob_estoque\', \'' + s.id + '\')" class="text-rose-500 font-semibold">Excluir</button></td></tr>';
                 if (isLow) {
                     emAlerta = true;
-                    sugestaoBox.innerHTML += '<div class="bg-slate-800 p-3 rounded-lg border border-slate-700 fade-in"><p class="font-bold text-white">' + s.nome + '</p><p class="text-[11px] text-slate-400 mt-1">Atual: <strong class="text-rose-400">' + s.qtd + '</strong> | Mínimo: ' + s.min + '</p></div>';
+                    sugestaoBox.innerHTML += '<div class="bg-slate-800 p-3 rounded-lg border border-slate-700 fade-in"><p class="font-bold text-white">' + s.nome + '</p><p class="text-[11px] text-slate-400 mt-1">Atual: <strong class="text-rose-400">' + s.qtd + '</strong> | Mínimo: ' + s.min + "</p></div>";
                 }
             });
-
             if (filteredData.length === 0 && searchTerm) {
                 tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">Nenhum insumo encontrado para "' + searchTerm + '".</td></tr>';
             }
@@ -1764,40 +1708,40 @@
         }
 
         function renderManagersList() {
-            var grid = document.getElementById('managers-grid');
+            var grid = document.getElementById("managers-grid");
             if (!grid) return;
-            grid.innerHTML = '';
+            grid.innerHTML = "";
             FILIAIS.forEach(function(f) {
-                var mgr = window.managersData[f] || { nome: 'Não Cadastrado', tel: '-' };
+                var mgr = window.managersData[f] || { nome: "Não Cadastrado", tel: "-" };
                 var isTc = isTcase(f);
-                var badgeClass = isTc ? 'bg-[#8cc63f] text-black' : 'bg-slate-900 text-mob-teal';
-                grid.innerHTML += '<div class="bg-white p-4 rounded-xl shadow-sm border space-y-2 fade-in"><div class="flex justify-between items-center"><span class="font-black text-xs px-2.5 py-1 rounded-md ' + badgeClass + '">' + f + '</span><button onclick="openManagerModal(\'' + f + '\')" class="text-slate-400 hover:text-slate-800 text-xs font-semibold"><i class="fa-solid fa-pen"></i> Editar</button></div><p class="font-bold text-slate-800 text-sm mt-2">' + mgr.nome + '</p><p class="text-xs text-slate-500 flex items-center gap-1.5"><i class="fa-solid fa-phone text-emerald-600"></i> ' + mgr.tel + '</p></div>';
+                var badgeClass = isTc ? "bg-[#8cc63f] text-black" : "bg-slate-900 text-mob-teal";
+                grid.innerHTML += '<div class="bg-white p-4 rounded-xl shadow-sm border space-y-2 fade-in"><div class="flex justify-between items-center"><span class="font-black text-xs px-2.5 py-1 rounded-md ' + badgeClass + '">' + f + '</span><button onclick="openManagerModal(\'' + f + '\')" class="text-slate-400 hover:text-slate-800 text-xs font-semibold"><i class="fa-solid fa-pen"></i> Editar</button></div><p class="font-bold text-slate-800 text-sm mt-2">' + mgr.nome + '</p><p class="text-xs text-slate-500 flex items-center gap-1.5"><i class="fa-solid fa-phone text-emerald-600"></i> ' + mgr.tel + "</p></div>";
             });
         }
 
         function openManagerModal(filialId) {
-            var mgr = window.managersData[filialId] || { nome: '', tel: '' };
-            document.getElementById('mgr-filial-id').value = filialId;
-            document.getElementById('mgr-nome').value = mgr.nome !== 'Não Cadastrado' ? mgr.nome : '';
-            document.getElementById('mgr-tel').value = mgr.tel !== '-' ? mgr.tel : '';
-            openModal('modal-manager');
+            var mgr = window.managersData[filialId] || { nome: "", tel: "" };
+            document.getElementById("mgr-filial-id").value = filialId;
+            document.getElementById("mgr-nome").value = mgr.nome !== "Não Cadastrado" ? mgr.nome : "";
+            document.getElementById("mgr-tel").value = mgr.tel !== "-" ? mgr.tel : "";
+            openModal("modal-manager");
         }
 
         async function saveManager(e) {
             e.preventDefault();
-            var btn = document.getElementById('btn-save-manager');
+            var btn = document.getElementById("btn-save-manager");
             var originalText = btn.textContent;
-            btn.textContent = 'Salvando...';
+            btn.textContent = "Salvando...";
             btn.disabled = true;
             try {
-                var filialId = document.getElementById('mgr-filial-id').value;
-                var nome = document.getElementById('mgr-nome').value;
-                var tel = document.getElementById('mgr-tel').value;
+                var filialId = document.getElementById("mgr-filial-id").value;
+                var nome = document.getElementById("mgr-nome").value;
+                var tel = document.getElementById("mgr-tel").value;
                 await window.setDoc(window.doc(window.db, "mob_gerentes", filialId), { nome: nome, tel: tel });
-                closeModal('modal-manager');
-                showToast('Contato do gerente atualizado!');
+                closeModal("modal-manager");
+                showToast("Contato do gerente atualizado!");
             } catch (err) {
-                alert('Erro ao salvar gerente: ' + err.message);
+                alert("Erro ao salvar gerente: " + err.message);
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;
@@ -1805,59 +1749,59 @@
         }
 
         function updateTermData() {
-            var filial = document.getElementById('termo-select-filial').value;
-            var mgr = window.managersData[filial] || { nome: 'Não Cadastrado', tel: '-' };
+            var filial = document.getElementById("termo-select-filial").value;
+            var mgr = window.managersData[filial] || { nome: "Não Cadastrado", tel: "-" };
             var isTc = isTcase(filial);
-            var brandContainer = document.getElementById('termo-header-brand');
+            var brandContainer = document.getElementById("termo-header-brand");
             if (isTc) {
-                brandContainer.innerHTML = '<div><span class="font-extrabold text-3xl tracking-tight text-black flex items-center gap-1.5"><span class="w-5 h-5 rounded-full bg-[#8cc63f]"></span> tcase</span><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Rede T-Case - Vistoria e Operações</p></div><div class="text-right text-xs space-y-1"><p class="font-bold uppercase text-slate-700">Termo de Vistoria e Pendências</p><p class="text-slate-500">' + new Date().toLocaleDateString('pt-BR') + '</p></div>';
+                brandContainer.innerHTML = '<div><span class="font-extrabold text-3xl tracking-tight text-black flex items-center gap-1.5"><span class="w-5 h-5 rounded-full bg-[#8cc63f]"></span> tcase</span><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Rede T-Case - Vistoria e Operações</p></div><div class="text-right text-xs space-y-1"><p class="font-bold uppercase text-slate-700">Termo de Vistoria e Pendências</p><p class="text-slate-500">' + new Date().toLocaleDateString("pt-BR") + "</p></div>";
             } else {
-                brandContainer.innerHTML = '<div><span class="font-black text-3xl tracking-tighter text-black"><span class="text-[#00C4B4]">MOB</span> CELL</span><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Rede MOB CELL - Gestão de Infraestrutura</p></div><div class="text-right text-xs space-y-1"><p class="font-bold uppercase text-slate-700">Termo de Vistoria e Pendências</p><p class="text-slate-500">' + new Date().toLocaleDateString('pt-BR') + '</p></div>';
+                brandContainer.innerHTML = '<div><span class="font-black text-3xl tracking-tighter text-black"><span class="text-[#00C4B4]">MOB</span> CELL</span><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Rede MOB CELL - Gestão de Infraestrutura</p></div><div class="text-right text-xs space-y-1"><p class="font-bold uppercase text-slate-700">Termo de Vistoria e Pendências</p><p class="text-slate-500">' + new Date().toLocaleDateString("pt-BR") + "</p></div>";
             }
-            document.getElementById('termo-doc-filial').textContent = (isTc ? 'T-CASE' : 'MOB CELL') + ' - ' + filial;
-            document.getElementById('termo-doc-gerente').textContent = mgr.nome;
-            document.getElementById('termo-doc-contato').textContent = mgr.tel !== '-' ? 'Contato: ' + mgr.tel : '';
+            document.getElementById("termo-doc-filial").textContent = (isTc ? "T-CASE" : "MOB CELL") + " - " + filial;
+            document.getElementById("termo-doc-gerente").textContent = mgr.nome;
+            document.getElementById("termo-doc-contato").textContent = mgr.tel !== "-" ? "Contato: " + mgr.tel : "";
         }
 
         function renderExecReport() {
-            var container = document.getElementById('exec-report-list');
+            var container = document.getElementById("exec-report-list");
             if (!container) return;
-            container.innerHTML = '';
+            container.innerHTML = "";
             FILIAIS.forEach(function(f) {
-                var pendentes = window.maintenanceData.filter(function(m) { return m.filialId === f && m.status !== 'Concluído'; });
-                var concluidos = window.maintenanceData.filter(function(m) { return m.filialId === f && m.status === 'Concluído'; });
+                var pendentes = window.maintenanceData.filter(function(m) { return m.filialId === f && m.status !== "Concluído"; });
+                var concluidos = window.maintenanceData.filter(function(m) { return m.filialId === f && m.status === "Concluído"; });
                 var isTc = isTcase(f);
-                container.innerHTML += '<div class="border rounded-lg p-4 space-y-2 bg-white"><div class="flex justify-between items-center border-b pb-2"><div class="flex items-center gap-2"><span class="font-bold text-sm text-slate-800">' + f + '</span>' + (isTc ? '<span class="text-[9px] bg-[#8cc63f] text-black font-extrabold px-1.5 py-0.5 rounded">T-CASE</span>' : '') + '</div><span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">' + pendentes.length + ' pendências</span></div><p class="text-xs text-slate-600 font-semibold">Pendências Ativas:</p><ul class="text-xs text-slate-500 list-disc pl-4 space-y-1">' + (pendentes.map(function(p) { return '<li>' + p.descricao + ' (' + p.prioridade + ')</li>'; }).join('') || '<li class="text-slate-400">Nenhuma pendência.</li>') + '</ul><p class="text-[11px] text-emerald-600 pt-1 font-semibold">✔ ' + concluidos.length + ' manutenções concluídas.</p></div>';
+                container.innerHTML += '<div class="border rounded-lg p-4 space-y-2 bg-white"><div class="flex justify-between items-center border-b pb-2"><div class="flex items-center gap-2"><span class="font-bold text-sm text-slate-800">' + f + '</span>' + (isTc ? '<span class="text-[9px] bg-[#8cc63f] text-black font-extrabold px-1.5 py-0.5 rounded">T-CASE</span>' : "") + '</div><span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">' + pendentes.length + ' pendências</span></div><p class="text-xs text-slate-600 font-semibold">Pendências Ativas:</p><ul class="text-xs text-slate-500 list-disc pl-4 space-y-1">' + (pendentes.map(function(p) { return "<li>" + p.descricao + " (" + p.prioridade + ")</li>"; }).join("") || '<li class="text-slate-400">Nenhuma pendência.</li>') + '</ul><p class="text-[11px] text-emerald-600 pt-1 font-semibold">✔ ' + concluidos.length + " manutenções concluídas.</p></div>";
             });
         }
 
         function renderAttachments() {
-            var grid = document.getElementById('attachments-grid');
+            var grid = document.getElementById("attachments-grid");
             if (!grid) return;
-            grid.innerHTML = '';
+            grid.innerHTML = "";
             window.attachmentData.forEach(function(a) {
-                grid.innerHTML += '<div class="bg-white p-4 rounded-xl shadow-sm border space-y-2"><span class="text-[10px] font-bold text-mob-teal bg-slate-900 px-2 py-0.5 rounded">' + a.filialId + '</span><h4 class="font-bold text-xs text-slate-800">' + a.titulo + '</h4><a href="' + a.url + '" target="_blank" class="text-indigo-600 hover:underline text-xs flex items-center gap-1"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Link / Pasta Fotos</a><button onclick="deleteDocItem(\'mob_anexos\', \' + a.id + ')" class="text-rose-500 text-xs font-semibold">Excluir</button></div>';
+                grid.innerHTML += '<div class="bg-white p-4 rounded-xl shadow-sm border space-y-2"><span class="text-[10px] font-bold text-mob-teal bg-slate-900 px-2 py-0.5 rounded">' + a.filialId + '</span><h4 class="font-bold text-xs text-slate-800">' + a.titulo + '</h4><a href="' + a.url + '" target="_blank" class="text-indigo-600 hover:underline text-xs flex items-center gap-1"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Link / Pasta Fotos</a><button onclick="deleteDocItem(\'mob_anexos\', \'' + a.id + '\')" class="text-rose-500 text-xs font-semibold">Excluir</button></div>';
             });
         }
 
         async function saveAttachment(e) {
             e.preventDefault();
-            var btn = document.getElementById('btn-save-attachment');
+            var btn = document.getElementById("btn-save-attachment");
             var originalText = btn.textContent;
-            btn.textContent = 'Salvando...';
+            btn.textContent = "Salvando...";
             btn.disabled = true;
             try {
                 await window.addDoc(window.collection(window.db, "mob_anexos"), {
-                    filialId: document.getElementById('att-filial').value,
-                    titulo: document.getElementById('att-titulo').value,
-                    url: document.getElementById('att-url').value
+                    filialId: document.getElementById("att-filial").value,
+                    titulo: document.getElementById("att-titulo").value,
+                    url: document.getElementById("att-url").value
                 });
-                document.getElementById('att-titulo').value = '';
-                document.getElementById('att-url').value = '';
-                closeModal('modal-attachment');
-                showToast('Link salvo com sucesso!');
+                document.getElementById("att-titulo").value = "";
+                document.getElementById("att-url").value = "";
+                closeModal("modal-attachment");
+                showToast("Link salvo com sucesso!");
             } catch (err) {
-                alert('Erro ao salvar anexo: ' + err.message);
+                alert("Erro ao salvar anexo: " + err.message);
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;
@@ -1868,84 +1812,78 @@
             if (confirm("Deseja apagar este registro permanentemente da nuvem?")) {
                 try {
                     await window.deleteDoc(window.doc(window.db, coll, id));
-                    showToast('Registro excluído!');
+                    showToast("Registro excluído!");
                 } catch (err) {
-                    alert('Erro ao excluir: ' + err.message);
+                    alert("Erro ao excluir: " + err.message);
                 }
             }
         }
 
-        function openModal(id) { 
-            if(id === 'modal-maintenance') {
+        function openModal(id) {
+            if (id === "modal-maintenance") {
                 populateStockSelect();
                 solicitacoesSelecionadasOS = [];
                 carregarSolicitacoesParaOS();
             }
-            document.getElementById(id).classList.remove('hidden'); 
+            document.getElementById(id).classList.remove("hidden");
         }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add("hidden"); }
 
-        // ====== CRONOGRAMA SEMANAL ======
+        // ====== CRONOGRAMA ======
         function renderCronograma() {
-            var grid = document.getElementById('cronograma-grid');
+            var grid = document.getElementById("cronograma-grid");
             if (!grid) return;
-            grid.innerHTML = '';
-
+            grid.innerHTML = "";
             DIAS_SEMANA.forEach(function(dia) {
                 var visitas = window.cronogramaData[dia.key] ? (window.cronogramaData[dia.key].visitas || []) : [];
-                var visitasHtml = '';
+                var visitasHtml = "";
                 visitas.forEach(function(v, idx) {
                     var isTc = isTcase(v.filial);
-                    var badge = isTc ? '<span class="text-[9px] bg-[#8cc63f] text-black font-extrabold px-1 py-0.5 rounded">T-CASE</span>' : '';
-                    var hora = v.hora ? '<span class="text-[10px] text-slate-500"><i class="fa-regular fa-clock"></i> ' + v.hora + '</span>' : '';
+                    var badge = isTc ? '<span class="text-[9px] bg-[#8cc63f] text-black font-extrabold px-1 py-0.5 rounded">T-CASE</span>' : "";
+                    var hora = v.hora ? '<span class="text-[10px] text-slate-500"><i class="fa-regular fa-clock"></i> ' + v.hora + "</span>" : "";
                     visitasHtml += '<div class="cronograma-card bg-white border border-slate-200 rounded-lg p-2.5 text-xs relative group fade-in">' +
                         '<div class="flex justify-between items-start">' +
                         '<div class="flex-1 min-w-0">' +
-                        '<p class="font-bold text-slate-800 truncate">' + v.filial + ' ' + badge + '</p>' +
-                        (v.obs ? '<p class="text-[10px] text-slate-500 mt-0.5 truncate">' + v.obs + '</p>' : '') +
+                        '<p class="font-bold text-slate-800 truncate">' + v.filial + " " + badge + "</p>" +
+                        (v.obs ? '<p class="text-[10px] text-slate-500 mt-0.5 truncate">' + v.obs + "</p>" : "") +
                         hora +
                         '</div>' +
-                        '<button onclick="removeCronogramaItem(\'' + dia.key + '\', ' + idx + ')" class="text-rose-400 hover:text-rose-600 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Remover"><i class="fa-solid fa-xmark"></i></button>' +
-                        '</div></div>';
+                        '<button onclick="removeCronogramaItem(\'' + dia.key + "', " + idx + ')" class="text-rose-400 hover:text-rose-600 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Remover"><i class="fa-solid fa-xmark"></i></button>' +
+                        "</div></div>";
                 });
-
                 grid.innerHTML += '<div class="' + dia.color + ' border rounded-xl p-3 space-y-2 cronograma-dia">' +
                     '<div class="flex items-center justify-between">' +
                     '<h4 class="font-bold text-xs text-slate-700">' + dia.short + '</h4>' +
-                    '<span class="text-[10px] font-bold text-slate-500 bg-white/60 px-1.5 py-0.5 rounded">' + visitas.length + '</span>' +
-                    '</div>' +
-                    '<div class="space-y-2">' + (visitasHtml || '<p class="text-[10px] text-slate-400 text-center py-4 italic">Nenhuma visita agendada</p>') + '</div>' +
-                    '</div>';
+                    '<span class="text-[10px] font-bold text-slate-500 bg-white/60 px-1.5 py-0.5 rounded">' + visitas.length + "</span>" +
+                    "</div>" +
+                    '<div class="space-y-2">' + (visitasHtml || '<p class="text-[10px] text-slate-400 text-center py-4 italic">Nenhuma visita agendada</p>') + "</div>" +
+                    "</div>";
             });
         }
 
         async function saveCronograma(e) {
             e.preventDefault();
-            var btn = document.getElementById('btn-save-cron');
+            var btn = document.getElementById("btn-save-cron");
             var originalText = btn.textContent;
-            btn.textContent = 'Agendando...';
+            btn.textContent = "Agendando...";
             btn.disabled = true;
             try {
-                var dia = document.getElementById('cron-dia').value;
-                var filial = document.getElementById('cron-filial').value;
-                var obs = document.getElementById('cron-obs').value.trim();
-                var hora = document.getElementById('cron-hora').value;
-
+                var dia = document.getElementById("cron-dia").value;
+                var filial = document.getElementById("cron-filial").value;
+                var obs = document.getElementById("cron-obs").value.trim();
+                var hora = document.getElementById("cron-hora").value;
                 var docRef = window.doc(window.db, "mob_cronograma", dia);
                 var docSnap = await window.getDoc(docRef);
                 var visitas = [];
-                if (docSnap.exists()) {
-                    visitas = docSnap.data().visitas || [];
-                }
+                if (docSnap.exists()) visitas = docSnap.data().visitas || [];
                 visitas.push({ filial: filial, obs: obs, hora: hora, criadoEm: new Date().toISOString() });
-
                 await window.setDoc(docRef, { visitas: visitas });
-                closeModal('modal-cronograma');
-                document.getElementById('cron-obs').value = '';
-                document.getElementById('cron-hora').value = '';
-                showToast('Visita agendada com sucesso!');
+                closeModal("modal-cronograma");
+                document.getElementById("cron-obs").value = "";
+                document.getElementById("cron-hora").value = "";
+                showToast("Visita agendada com sucesso!");
             } catch (err) {
-                alert('Erro ao agendar: ' + err.message);
+                alert("Erro ao agendar: " + err.message);
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;
@@ -1953,7 +1891,7 @@
         }
 
         async function removeCronogramaItem(dia, index) {
-            if (!confirm('Remover esta visita do cronograma?')) return;
+            if (!confirm("Remover esta visita do cronograma?")) return;
             try {
                 var docRef = window.doc(window.db, "mob_cronograma", dia);
                 var docSnap = await window.getDoc(docRef);
@@ -1961,72 +1899,65 @@
                 var visitas = docSnap.data().visitas || [];
                 visitas.splice(index, 1);
                 await window.setDoc(docRef, { visitas: visitas });
-                showToast('Visita removida!');
+                showToast("Visita removida!");
             } catch (err) {
-                alert('Erro ao remover: ' + err.message);
+                alert("Erro ao remover: " + err.message);
             }
         }
 
         function printCronograma() {
-            var container = document.getElementById('print-crono-conteudo');
-            var dataEl = document.getElementById('print-crono-data');
-            dataEl.textContent = 'Gerado em: ' + new Date().toLocaleDateString('pt-BR');
-            container.innerHTML = '';
-
+            var container = document.getElementById("print-crono-conteudo");
+            var dataEl = document.getElementById("print-crono-data");
+            dataEl.textContent = "Gerado em: " + new Date().toLocaleDateString("pt-BR");
+            container.innerHTML = "";
             DIAS_SEMANA.forEach(function(dia) {
                 var visitas = window.cronogramaData[dia.key] ? (window.cronogramaData[dia.key].visitas || []) : [];
-                var visitasHtml = '';
+                var visitasHtml = "";
                 if (visitas.length === 0) {
                     visitasHtml = '<p class="text-xs text-slate-400 italic">Nenhuma visita agendada</p>';
                 } else {
                     visitasHtml = '<ul class="space-y-1">';
                     visitas.forEach(function(v) {
-                        var hora = v.hora ? ' (' + v.hora + ')' : '';
-                        var obs = v.obs ? ' — ' + v.obs : '';
-                        visitasHtml += '<li class="text-xs text-slate-700"><strong>' + v.filial + '</strong>' + hora + obs + '</li>';
+                        var hora = v.hora ? " (" + v.hora + ")" : "";
+                        var obs = v.obs ? " — " + v.obs : "";
+                        visitasHtml += '<li class="text-xs text-slate-700"><strong>' + v.filial + "</strong>" + hora + obs + "</li>";
                     });
-                    visitasHtml += '</ul>';
+                    visitasHtml += "</ul>";
                 }
-
-                container.innerHTML += '<div class="border border-slate-300 rounded-lg p-3"><h5 class="font-bold text-xs text-slate-800 mb-2 border-b pb-1">' + dia.label + '</h5>' + visitasHtml + '</div>';
+                container.innerHTML += '<div class="border border-slate-300 rounded-lg p-3"><h5 class="font-bold text-xs text-slate-800 mb-2 border-b pb-1">' + dia.label + "</h5>" + visitasHtml + "</div>";
             });
-
-            var printable = document.getElementById('printable-cronograma');
-            printable.classList.remove('hidden');
+            var printable = document.getElementById("printable-cronograma");
+            printable.classList.remove("hidden");
             window.print();
-            setTimeout(function() { printable.classList.add('hidden'); }, 500);
+            setTimeout(function() { printable.classList.add("hidden"); }, 500);
         }
 
-        // ====== IMPRESSÃO DE ORDEM DE SERVIÇO ======
+        // ====== IMPRESSÃO DE OS ======
         function printOS(id) {
             var order = window.maintenanceData.find(function(m) { return m.id === id; });
             if (!order) return;
-
             var isTc = isTcase(order.filialId);
-            var brand = isTc ? 'T-CASE' : 'MOB CELL';
-            var dataCriacao = order.dataCriacao ? new Date(order.dataCriacao).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
-
-            document.getElementById('os-numero').textContent = 'Nº ' + id.slice(-6).toUpperCase();
-            document.getElementById('os-filial').textContent = brand + ' — ' + order.filialId;
-            document.getElementById('os-data').textContent = dataCriacao;
-            document.getElementById('os-prioridade').textContent = order.prioridade;
-            document.getElementById('os-prioridade').className = 'font-bold text-sm ' + (order.prioridade === 'Urgente' ? 'text-rose-600' : order.prioridade === 'Alta' ? 'text-orange-600' : 'text-slate-800');
-            document.getElementById('os-descricao').textContent = order.descricao;
-
-            var insumosBody = document.getElementById('os-insumos');
-            insumosBody.innerHTML = '';
+            var brand = isTc ? "T-CASE" : "MOB CELL";
+            var dataCriacao = order.dataCriacao ? new Date(order.dataCriacao).toLocaleDateString("pt-BR") : new Date().toLocaleDateString("pt-BR");
+            document.getElementById("os-numero").textContent = "Nº " + id.slice(-6).toUpperCase();
+            document.getElementById("os-filial").textContent = brand + " — " + order.filialId;
+            document.getElementById("os-data").textContent = dataCriacao;
+            document.getElementById("os-prioridade").textContent = order.prioridade;
+            document.getElementById("os-prioridade").className = "font-bold text-sm " + (order.prioridade === "Urgente" ? "text-rose-600" : order.prioridade === "Alta" ? "text-orange-600" : "text-slate-800");
+            document.getElementById("os-descricao").textContent = order.descricao;
+            var insumosBody = document.getElementById("os-insumos");
+            insumosBody.innerHTML = "";
             if (order.items && order.items.length > 0) {
                 order.items.forEach(function(item) {
-                    insumosBody.innerHTML += '<tr><td class="p-2 border-r border-slate-300">' + item.nome + '</td><td class="p-2 text-center">' + item.qtd + '</td></tr>';
+                    insumosBody.innerHTML += '<tr><td class="p-2 border-r border-slate-300">' + item.nome + '</td><td class="p-2 text-center">' + item.qtd + "</td></tr>";
                 });
             } else {
                 insumosBody.innerHTML = '<tr><td colspan="2" class="p-2 text-center text-slate-400 italic">Nenhum insumo vinculado</td></tr>';
             }
-
-            var printable = document.getElementById('printable-os');
-            printable.classList.remove('hidden');
+            var printable = document.getElementById("printable-os");
+            printable.classList.remove("hidden");
             window.print();
-            setTimeout(function() { printable.classList.add('hidden'); }, 500);
+            setTimeout(function() { printable.classList.add("hidden"); }, 500);
         }
     </script>
 </body>
