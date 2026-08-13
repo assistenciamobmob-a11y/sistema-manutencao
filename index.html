@@ -49,6 +49,7 @@
             renderMaintenance();
             renderDashboard();
             renderExecReport();
+            renderRelatorioDetalhado();
         });
 
         onSnapshot(collection(db, "mob_gerentes"), (snapshot) => {
@@ -56,6 +57,7 @@
             snapshot.forEach((d) => window.managersData[d.id] = d.data());
             renderManagersList();
             updateTermData();
+            renderGerenteLinks();
         });
 
         onSnapshot(collection(db, "mob_anexos"), (snapshot) => {
@@ -68,6 +70,15 @@
             window.cronogramaData = {};
             snapshot.forEach((d) => { window.cronogramaData[d.id] = d.data(); });
             renderCronograma();
+        });
+
+        onSnapshot(collection(db, "mob_solicitacoes"), (snapshot) => {
+            window.solicitacoesData = [];
+            snapshot.forEach((d) => window.solicitacoesData.push({ id: d.id, ...d.data() }));
+            renderSolicitacoesAuditor();
+            renderSolicitacoesGerente();
+            renderDashboard();
+            renderRelatorioDetalhado();
         });
     </script>
 
@@ -89,334 +100,506 @@
         .cronograma-dia { min-height: 160px; }
         .cronograma-card { transition: all 0.2s; }
         .cronograma-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .solicitacao-item { transition: all 0.2s; }
+        .solicitacao-item:hover { background-color: #f8fafc; }
         @media print {
             body * { visibility: hidden; }
-            #printable-area, #printable-area *, #printable-os, #printable-os *, #printable-cronograma, #printable-cronograma * { visibility: visible; }
-            #printable-area, #printable-os, #printable-cronograma { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
+            #printable-area, #printable-area *, #printable-os, #printable-os *, #printable-cronograma, #printable-cronograma *, #printable-relatorio, #printable-relatorio * { visibility: visible; }
+            #printable-area, #printable-os, #printable-cronograma, #printable-relatorio { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
             .no-print { display: none !important; }
         }
     </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body class="text-slate-800 antialiased flex flex-col min-h-screen">
 
-    <header class="bg-mob-dark text-white shadow-md sticky top-0 z-40 no-print">
-        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="bg-white px-3 py-1.5 rounded-lg flex items-center gap-2">
-                    <span class="font-extrabold text-lg tracking-tighter text-black"><span class="text-[#00C4B4]">MOB</span> CELL</span>
-                    <span class="text-slate-300 font-light">|</span>
-                    <span class="font-bold text-sm tracking-tight text-black flex items-center gap-1">
-                        <span class="w-2.5 h-2.5 rounded-full bg-[#8cc63f]"></span> tcase
-                    </span>
+    <!-- ====== MODO GERENTE (detectado via URL) ====== -->
+    <div id="modo-gerente" class="hidden min-h-screen bg-slate-50">
+        <header class="bg-mob-dark text-white shadow-md sticky top-0 z-40">
+            <div class="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white px-3 py-1.5 rounded-lg flex items-center gap-2">
+                        <span class="font-extrabold text-lg tracking-tighter text-black"><span class="text-[#00C4B4]">MOB</span> CELL</span>
+                        <span class="text-slate-300 font-light">|</span>
+                        <span class="font-bold text-sm tracking-tight text-black flex items-center gap-1">
+                            <span class="w-2.5 h-2.5 rounded-full bg-[#8cc63f]"></span> tcase
+                        </span>
+                    </div>
                 </div>
-                <div class="border-l border-slate-700 pl-3 hidden sm:block">
-                    <h1 class="font-bold text-sm text-slate-100">Painel Central do Auditor</h1>
-                    <p class="text-[10px] text-slate-400">Controle Operacional - 12 Filiais</p>
-                </div>
+                <span class="text-xs text-slate-400">Portal do Gerente</span>
             </div>
-            <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-3 py-1 rounded-full font-semibold flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Nuvem Conectada
-            </span>
-        </div>
-    </header>
+        </header>
 
-    <div class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
-
-        <div class="border-b border-slate-200 bg-white rounded-xl shadow-sm p-2 flex flex-wrap gap-2 no-print">
-            <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn bg-slate-900 text-white px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
-                <i class="fa-solid fa-chart-line text-mob-teal"></i> Visão Geral
-            </button>
-            <button onclick="switchTab('filiais')" id="tab-btn-filiais" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
-                <i class="fa-solid fa-store"></i> Controle 12 Filiais
-            </button>
-            <button onclick="switchTab('cronograma')" id="tab-btn-cronograma" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
-                <i class="fa-solid fa-calendar-week"></i> Cronograma Semanal
-            </button>
-            <button onclick="switchTab('estoque')" id="tab-btn-estoque" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
-                <i class="fa-solid fa-boxes-stacked"></i> Estoque Insumos
-            </button>
-            <button onclick="switchTab('gerentes')" id="tab-btn-gerentes" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
-                <i class="fa-solid fa-user-gear"></i> Contato Gerentes
-            </button>
-            <button onclick="switchTab('termo')" id="tab-btn-termo" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
-                <i class="fa-solid fa-file-signature"></i> Imprimir Termo Gerente
-            </button>
-            <button onclick="switchTab('relatorio')" id="tab-btn-relatorio" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
-                <i class="fa-solid fa-file-invoice"></i> Relatório Executivo
-            </button>
-            <button onclick="switchTab('anexos')" id="tab-btn-anexos" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
-                <i class="fa-solid fa-paperclip"></i> Fotos & Drive
-            </button>
-        </div>
-
-        <div id="tab-dashboard" class="tab-content space-y-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center justify-between">
+        <div class="max-w-2xl mx-auto px-4 py-8 space-y-6">
+            <div class="bg-white rounded-xl shadow-sm border p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-mob-teal/10 flex items-center justify-center text-mob-teal">
+                        <i class="fa-solid fa-store"></i>
+                    </div>
                     <div>
-                        <p class="text-xs font-semibold text-slate-400 uppercase">Rede Registrada</p>
-                        <h3 class="text-2xl font-black text-slate-800 mt-1">12 Filiais</h3>
-                        <p class="text-[10px] text-slate-400 mt-0.5">10 MOB CELL | 2 T-CASE</p>
-                    </div>
-                    <div class="p-3 bg-slate-100 text-slate-700 rounded-xl"><i class="fa-solid fa-network-wired text-xl"></i></div>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-semibold text-slate-400 uppercase">A Fazer (Pendentes)</p>
-                        <h3 id="dash-pendentes" class="text-2xl font-black text-amber-600 mt-1">0</h3>
-                    </div>
-                    <div class="p-3 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-clock-rotate-left text-xl"></i></div>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-semibold text-slate-400 uppercase">Concluídos</p>
-                        <h3 id="dash-concluidas" class="text-2xl font-black text-emerald-600 mt-1">0</h3>
-                    </div>
-                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-circle-check text-xl"></i></div>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-semibold text-slate-400 uppercase">Insumos em Alerta</p>
-                        <h3 id="dash-compras" class="text-2xl font-black text-rose-600 mt-1">0</h3>
-                    </div>
-                    <div class="p-3 bg-rose-50 text-rose-600 rounded-xl"><i class="fa-solid fa-triangle-exclamation text-xl"></i></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-filiais" class="tab-content hidden space-y-4">
-            <div class="bg-white p-4 rounded-xl shadow-sm border flex flex-wrap justify-between items-center gap-4">
-                <div>
-                    <h2 class="font-bold text-base text-slate-800">Selecione a Filial</h2>
-                    <p class="text-xs text-slate-500">Histórico de intervenções e ordens em andamento.</p>
-                </div>
-                <div class="flex gap-2 w-full sm:w-auto">
-                    <select id="select-filial-filtro" onchange="renderFilialDetail()" class="border p-2 rounded-lg text-xs font-bold bg-slate-50 border-slate-300 w-full sm:w-auto"></select>
-                    <button onclick="openModal('modal-maintenance')" class="bg-mob-dark hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-lg whitespace-nowrap">
-                        <i class="fa-solid fa-plus text-mob-teal"></i> Nova Ordem
-                    </button>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-white rounded-xl shadow-sm border p-4 space-y-3">
-                    <h3 class="font-bold text-xs uppercase text-amber-600 flex items-center gap-2">
-                        <i class="fa-solid fa-list-ul"></i> 1. O que PRECISA SER FEITO (Pendente)
-                    </h3>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-slate-50 border-b text-slate-500 uppercase">
-                                <tr><th class="p-2">Item / Descrição</th><th class="p-2">Insumos Alocados</th><th class="p-2 text-center">Status</th><th class="p-2 text-right">Ação</th></tr>
-                            </thead>
-                            <tbody id="tb-pendentes-filial" class="divide-y"></tbody>
-                        </table>
+                        <h2 class="text-lg font-bold text-slate-900">Solicitação de Manutenção</h2>
+                        <p class="text-sm text-slate-500">Filial: <span id="gerente-filial-nome" class="font-bold text-slate-800">-</span></p>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border p-4 space-y-3">
-                    <h3 class="font-bold text-xs uppercase text-emerald-600 flex items-center gap-2">
-                        <i class="fa-solid fa-circle-check"></i> 2. O que JÁ FOI FEITO (Concluído)
-                    </h3>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-slate-50 border-b text-slate-500 uppercase">
-                                <tr><th class="p-2">Serviço Realizado</th><th class="p-2">Relatório do Técnico</th><th class="p-2 text-center">Data Conclusão</th><th class="p-2 text-right">Ação</th></tr>
-                            </thead>
-                            <tbody id="tb-concluidos-filial" class="divide-y"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-cronograma" class="tab-content hidden space-y-4">
-            <div class="bg-white p-4 rounded-xl shadow-sm border flex flex-wrap justify-between items-center gap-4 no-print">
-                <div>
-                    <h2 class="font-bold text-base text-slate-800">Cronograma Semanal de Manutenções</h2>
-                    <p class="text-xs text-slate-500">Agende as visitas de manutenção para cada dia da semana.</p>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="openModal('modal-cronograma')" class="bg-mob-dark text-white text-xs font-bold px-4 py-2.5 rounded-lg">
-                        <i class="fa-solid fa-plus text-mob-teal"></i> Agendar Visita
-                    </button>
-                    <button onclick="printCronograma()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg flex items-center gap-2">
-                        <i class="fa-solid fa-print"></i> Imprimir Cronograma
-                    </button>
-                </div>
-            </div>
-
-            <div id="cronograma-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3"></div>
-
-            <div id="printable-cronograma" class="hidden">
-                <div class="bg-white p-8 max-w-5xl mx-auto">
-                    <div class="flex justify-between items-center border-b-2 border-slate-900 pb-4 mb-6">
-                        <div class="flex items-center gap-3">
-                            <span class="font-black text-2xl tracking-tighter text-black"><span class="text-[#00C4B4]">MOB</span> CELL</span>
-                            <span class="text-slate-300 font-light text-xl">|</span>
-                            <span class="font-extrabold text-xl tracking-tight text-black flex items-center gap-1.5">
-                                <span class="w-3 h-3 rounded-full bg-[#8cc63f]"></span> tcase
-                            </span>
+                <form id="form-solicitacao-gerente" onsubmit="enviarSolicitacaoGerente(event)" class="space-y-4">
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+                        <p class="text-xs font-bold text-slate-700 uppercase">Adicionar Item à Solicitação</p>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600">Descrição do Item / Serviço:</label>
+                            <input type="text" id="sg-item" placeholder="Ex: Trocar luminária do banheiro, Pintar parede..." required class="w-full border border-slate-300 p-2.5 rounded-lg mt-1 text-sm focus:outline-none focus:ring-2 focus:ring-mob-teal/30">
                         </div>
-                        <div class="text-right">
-                            <p class="font-bold uppercase text-sm text-slate-800">Cronograma Semanal de Manutenções</p>
-                            <p class="text-xs text-slate-500" id="print-crono-data"></p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs font-semibold text-slate-600">Qtd Estimada:</label>
+                                <input type="number" id="sg-qtd" min="1" value="1" class="w-full border border-slate-300 p-2.5 rounded-lg mt-1 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-600">Prioridade:</label>
+                                <select id="sg-prioridade" class="w-full border border-slate-300 p-2.5 rounded-lg mt-1 text-sm bg-white">
+                                    <option>Baixa</option>
+                                    <option selected>Média</option>
+                                    <option>Alta</option>
+                                    <option>Urgente</option>
+                                </select>
+                            </div>
                         </div>
+                        <button type="button" onclick="adicionarItemSolicitacao()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-lg text-xs transition-colors">
+                            <i class="fa-solid fa-plus text-mob-teal mr-1"></i> Adicionar Item à Lista
+                        </button>
                     </div>
-                    <div id="print-crono-conteudo" class="grid grid-cols-2 gap-4"></div>
-                    <div class="mt-8 pt-4 border-t text-center text-xs text-slate-500">
-                        <p>Documento gerado automaticamente pelo Sistema de Gestão de Manutenção</p>
+
+                    <div id="sg-itens-lista" class="space-y-2"></div>
+
+                    <div>
+                        <label class="text-xs font-semibold text-slate-600">Observações Gerais (opcional):</label>
+                        <textarea id="sg-obs" rows="2" placeholder="Informe detalhes adicionais sobre a solicitação..." class="w-full border border-slate-300 p-2.5 rounded-lg mt-1 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-mob-teal/30"></textarea>
                     </div>
-                </div>
-            </div>
-        </div>
 
-        <div id="tab-estoque" class="tab-content hidden space-y-6">
-            <div class="bg-white p-4 rounded-xl shadow-sm border flex flex-wrap justify-between items-center gap-4">
-                <div>
-                    <h2 class="font-bold text-base text-slate-800">Estoque Geral de Insumos</h2>
-                    <p class="text-xs text-slate-500">Mapeamento de quantidades físicas para suporte das 12 filiais.</p>
-                </div>
-                <button onclick="openStockModal()" class="bg-mob-dark text-white text-xs font-bold px-4 py-2.5 rounded-lg">
-                    <i class="fa-solid fa-plus text-mob-teal"></i> Cadastrar Item
-                </button>
+                    <button type="submit" id="btn-enviar-solicitacao" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg text-sm transition-colors shadow-sm">
+                        <i class="fa-solid fa-paper-plane mr-1"></i> Enviar Solicitação para Auditoria
+                    </button>
+                </form>
             </div>
 
-            <div class="bg-white p-3 rounded-xl shadow-sm border no-print">
-                <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input type="text" id="stock-search" oninput="renderStock()" placeholder="Buscar insumo por nome ou categoria..." class="w-full pl-8 pr-3 py-2 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-mob-teal/30">
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-50 border-b font-semibold uppercase text-slate-500">
-                        <tr><th class="p-3">Insumo / Produto</th><th class="p-3">Categoria</th><th class="p-3 text-center">Qtd Atual</th><th class="p-3 text-center">Qtd Mínima (Alerta)</th><th class="p-3 text-center">Situação</th><th class="p-3 text-right">Ação</th></tr>
-                    </thead>
-                    <tbody id="stock-table-body" class="divide-y"></tbody>
-                </table>
-            </div>
-
-            <div class="bg-slate-900 text-white p-5 rounded-xl space-y-3">
-                <h3 class="font-bold text-mob-teal text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-boxes-packing"></i> Alerta de Reposição Necessária
+            <div class="bg-white rounded-xl shadow-sm border p-6">
+                <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-slate-400"></i> Histórico de Solicitações Enviadas
                 </h3>
-                <div id="sugestao-compra-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs"></div>
+                <div id="gerente-historico" class="mt-4 space-y-3"></div>
             </div>
         </div>
-
-        <div id="tab-gerentes" class="tab-content hidden space-y-4">
-            <div class="bg-white p-4 rounded-xl shadow-sm border">
-                <h2 class="font-bold text-base text-slate-800">Gerentes por Filial</h2>
-                <p class="text-xs text-slate-500">Cadastre e edite os contatos diretos dos responsáveis em cada loja.</p>
-            </div>
-            <div id="managers-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-        </div>
-
-        <div id="tab-termo" class="tab-content hidden space-y-6">
-            <div class="bg-white p-4 rounded-xl shadow-sm border flex flex-wrap justify-between items-center gap-4 no-print">
-                <div>
-                    <h2 class="font-bold text-sm text-slate-800">Termo Oficial de Requisito da Filial</h2>
-                    <p class="text-xs text-slate-500">Gere o documento impresso para o gerente preencher e assinar.</p>
-                </div>
-                <div class="flex gap-2">
-                    <select id="termo-select-filial" onchange="updateTermData()" class="border p-2 rounded-lg text-xs font-bold bg-slate-50 border-slate-300"></select>
-                    <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-2">
-                        <i class="fa-solid fa-print"></i> Imprimir Termo
-                    </button>
-                </div>
-            </div>
-
-            <div id="printable-area" class="bg-white p-10 rounded-xl shadow-sm border border-slate-200 max-w-3xl mx-auto space-y-6 text-slate-900">
-                <div class="flex justify-between items-center border-b-2 border-slate-900 pb-4" id="termo-header-brand"></div>
-                <div class="grid grid-cols-2 bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs gap-4">
-                    <div>
-                        <p class="text-slate-500 uppercase text-[10px] font-bold">Unidade de Atendimento:</p>
-                        <p class="font-extrabold text-sm text-slate-800" id="termo-doc-filial">-</p>
-                    </div>
-                    <div>
-                        <p class="text-slate-500 uppercase text-[10px] font-bold">Gerente Responsável:</p>
-                        <p class="font-bold text-sm text-slate-800" id="termo-doc-gerente">Não informado</p>
-                        <p class="text-[11px] text-slate-500" id="termo-doc-contato"></p>
-                    </div>
-                </div>
-                <div class="space-y-3">
-                    <p class="font-bold text-xs uppercase tracking-wider text-slate-800">1. Relação de Itens Que Necessitam de Manutenção / Troca:</p>
-                    <div class="border rounded-lg overflow-hidden border-slate-300">
-                        <table class="w-full text-left text-xs border-collapse">
-                            <thead class="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
-                                <tr><th class="p-2 border-r border-slate-300 w-12 text-center">Nº</th><th class="p-2 border-r border-slate-300">Item / Problema Identificado na Filial</th><th class="p-2 w-32 text-center">Qtd Estimada</th></tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-300">
-                                <tr><td class="p-3 border-r text-center font-bold text-slate-400">01</td><td class="p-3 border-r"></td><td class="p-3"></td></tr>
-                                <tr><td class="p-3 border-r text-center font-bold text-slate-400">02</td><td class="p-3 border-r"></td><td class="p-3"></td></tr>
-                                <tr><td class="p-3 border-r text-center font-bold text-slate-400">03</td><td class="p-3 border-r"></td><td class="p-3"></td></tr>
-                                <tr><td class="p-3 border-r text-center font-bold text-slate-400">04</td><td class="p-3 border-r"></td><td class="p-3"></td></tr>
-                                <tr><td class="p-3 border-r text-center font-bold text-slate-400">05</td><td class="p-3 border-r"></td><td class="p-3"></td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="pt-16 grid grid-cols-2 gap-10 text-center text-xs">
-                    <div class="border-t border-slate-800 pt-2"><p class="font-bold text-slate-800">Assinatura do Gerente da Loja</p></div>
-                    <div class="border-t border-slate-800 pt-2"><p class="font-bold text-slate-800">Auditoria / Infraestrutura</p></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-relatorio" class="tab-content hidden space-y-6">
-            <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center no-print">
-                <div>
-                    <h2 class="font-bold text-sm text-slate-800">Relatório Executivo Consolidador</h2>
-                    <p class="text-xs text-slate-500">Visão da rede para acompanhamento e tomada de decisão.</p>
-                </div>
-                <button onclick="window.print()" class="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-lg">
-                    <i class="fa-solid fa-print text-mob-teal"></i> Imprimir Relatório
-                </button>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border space-y-6">
-                <div class="border-b pb-4 flex justify-between items-center">
-                    <div>
-                        <div class="flex items-center gap-3">
-                            <span class="font-black text-2xl tracking-tighter text-black"><span class="text-[#00C4B4]">MOB</span> CELL</span>
-                            <span class="text-slate-300 font-light text-xl">|</span>
-                            <span class="font-extrabold text-xl tracking-tight text-black flex items-center gap-1.5">
-                                <span class="w-3 h-3 rounded-full bg-[#8cc63f]"></span> tcase
-                            </span>
-                        </div>
-                        <h3 class="text-xs font-bold uppercase text-slate-500 mt-2">Relatório Sintético de Manutenção das 12 Filiais</h3>
-                    </div>
-                </div>
-                <div class="space-y-4">
-                    <h4 class="font-bold text-xs uppercase text-slate-500">Status Atual por Unidade</h4>
-                    <div id="exec-report-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-anexos" class="tab-content hidden space-y-4">
-            <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center">
-                <div>
-                    <h2 class="font-bold text-base text-slate-800">Anexos e Fotos por Filial</h2>
-                    <p class="text-xs text-slate-500">Links para pastas no Google Drive com registros das unidades.</p>
-                </div>
-                <button onclick="openModal('modal-attachment')" class="bg-mob-dark text-white text-xs font-bold px-4 py-2.5 rounded-lg">
-                    <i class="fa-solid fa-link text-mob-teal"></i> Vincular Link
-                </button>
-            </div>
-            <div id="attachments-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-        </div>
-
     </div>
 
-    <!-- MODAL DE ORDEM -->
+    <!-- ====== MODO AUDITOR (sistema completo) ====== -->
+    <div id="modo-auditor" class="flex flex-col min-h-screen">
+        <header class="bg-mob-dark text-white shadow-md sticky top-0 z-40 no-print">
+            <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-white px-3 py-1.5 rounded-lg flex items-center gap-2">
+                        <span class="font-extrabold text-lg tracking-tighter text-black"><span class="text-[#00C4B4]">MOB</span> CELL</span>
+                        <span class="text-slate-300 font-light">|</span>
+                        <span class="font-bold text-sm tracking-tight text-black flex items-center gap-1">
+                            <span class="w-2.5 h-2.5 rounded-full bg-[#8cc63f]"></span> tcase
+                        </span>
+                    </div>
+                    <div class="border-l border-slate-700 pl-3 hidden sm:block">
+                        <h1 class="font-bold text-sm text-slate-100">Painel Central do Auditor</h1>
+                        <p class="text-[10px] text-slate-400">Controle Operacional - 12 Filiais</p>
+                    </div>
+                </div>
+                <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-3 py-1 rounded-full font-semibold flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Nuvem Conectada
+                </span>
+            </div>
+        </header>
+
+        <div class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
+
+            <div class="border-b border-slate-200 bg-white rounded-xl shadow-sm p-2 flex flex-wrap gap-2 no-print">
+                <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn bg-slate-900 text-white px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-mob-teal"></i> Visão Geral
+                </button>
+                <button onclick="switchTab('solicitacoes')" id="tab-btn-solicitacoes" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-clipboard-list text-indigo-500"></i> Solicitações Gerentes
+                </button>
+                <button onclick="switchTab('filiais')" id="tab-btn-filiais" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-store"></i> Controle 12 Filiais
+                </button>
+                <button onclick="switchTab('cronograma')" id="tab-btn-cronograma" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-week"></i> Cronograma Semanal
+                </button>
+                <button onclick="switchTab('estoque')" id="tab-btn-estoque" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-boxes-stacked"></i> Estoque Insumos
+                </button>
+                <button onclick="switchTab('gerentes')" id="tab-btn-gerentes" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-user-gear"></i> Contato Gerentes
+                </button>
+                <button onclick="switchTab('termo')" id="tab-btn-termo" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-file-signature"></i> Termo Vistoria
+                </button>
+                <button onclick="switchTab('relatorio')" id="tab-btn-relatorio" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-file-invoice"></i> Relatório Executivo
+                </button>
+                <button onclick="switchTab('relatorio-detalhado')" id="tab-btn-relatorio-detalhado" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-mob-teal"></i> Relatório Detalhado
+                </button>
+                <button onclick="switchTab('anexos')" id="tab-btn-anexos" class="tab-btn text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-paperclip"></i> Fotos & Drive
+                </button>
+            </div>
+
+            <!-- DASHBOARD -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-400 uppercase">Rede Registrada</p>
+                            <h3 class="text-2xl font-black text-slate-800 mt-1">12 Filiais</h3>
+                            <p class="text-[10px] text-slate-400 mt-0.5">10 MOB CELL | 2 T-CASE</p>
+                        </div>
+                        <div class="p-3 bg-slate-100 text-slate-700 rounded-xl"><i class="fa-solid fa-network-wired text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-400 uppercase">Solicitações Pendentes</p>
+                            <h3 id="dash-solicitacoes" class="text-2xl font-black text-indigo-600 mt-1">0</h3>
+                        </div>
+                        <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><i class="fa-solid fa-clipboard-list text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-400 uppercase">A Fazer (Pendentes)</p>
+                            <h3 id="dash-pendentes" class="text-2xl font-black text-amber-600 mt-1">0</h3>
+                        </div>
+                        <div class="p-3 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-clock-rotate-left text-xl"></i></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-400 uppercase">Concluídos</p>
+                            <h3 id="dash-concluidas" class="text-2xl font-black text-emerald-600 mt-1">0</h3>
+                        </div>
+                        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-circle-check text-xl"></i></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border lg:col-span-2">
+                        <h3 class="font-bold text-sm text-slate-800 mb-4">Solicitações Recentes dos Gerentes</h3>
+                        <div id="dash-solicitacoes-recentes" class="space-y-2"></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border">
+                        <h3 class="font-bold text-sm text-slate-800 mb-4">Insumos em Alerta</h3>
+                        <div id="dash-insumos-alerta" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SOLICITAÇÕES DOS GERENTES -->
+            <div id="tab-solicitacoes" class="tab-content hidden space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <h2 class="font-bold text-base text-slate-800">Solicitações Recebidas dos Gerentes</h2>
+                        <p class="text-xs text-slate-500">Itens solicitados por filial. Selecione para criar Ordens de Serviço.</p>
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <select id="filtro-solicitacao-filial" onchange="renderSolicitacoesAuditor()" class="border p-2 rounded-lg text-xs font-bold bg-slate-50 border-slate-300 w-full sm:w-auto">
+                            <option value="">Todas as Filiais</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="solicitacoes-list" class="space-y-4"></div>
+            </div>
+
+            <!-- FILIAIS -->
+            <div id="tab-filiais" class="tab-content hidden space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <h2 class="font-bold text-base text-slate-800">Selecione a Filial</h2>
+                        <p class="text-xs text-slate-500">Histórico de intervenções e ordens em andamento.</p>
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <select id="select-filial-filtro" onchange="renderFilialDetail()" class="border p-2 rounded-lg text-xs font-bold bg-slate-50 border-slate-300 w-full sm:w-auto"></select>
+                        <button onclick="openModal('modal-maintenance')" class="bg-mob-dark hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-lg whitespace-nowrap">
+                            <i class="fa-solid fa-plus text-mob-teal"></i> Nova Ordem
+                        </button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-sm border p-4 space-y-3">
+                        <h3 class="font-bold text-xs uppercase text-amber-600 flex items-center gap-2">
+                            <i class="fa-solid fa-list-ul"></i> 1. O que PRECISA SER FEITO (Pendente)
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-50 border-b text-slate-500 uppercase">
+                                    <tr><th class="p-2">Item / Descrição</th><th class="p-2">Insumos Alocados</th><th class="p-2 text-center">Status</th><th class="p-2 text-right">Ação</th></tr>
+                                </thead>
+                                <tbody id="tb-pendentes-filial" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border p-4 space-y-3">
+                        <h3 class="font-bold text-xs uppercase text-emerald-600 flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check"></i> 2. O que JÁ FOI FEITO (Concluído)
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-50 border-b text-slate-500 uppercase">
+                                    <tr><th class="p-2">Serviço Realizado</th><th class="p-2 text-center">Data Conclusão</th><th class="p-2 text-right">Ação</th></tr>
+                                </thead>
+                                <tbody id="tb-concluidos-filial" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CRONOGRAMA -->
+            <div id="tab-cronograma" class="tab-content hidden space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border flex flex-wrap justify-between items-center gap-4 no-print">
+                    <div>
+                        <h2 class="font-bold text-base text-slate-800">Cronograma Semanal de Manutenções</h2>
+                        <p class="text-xs text-slate-500">Agende as visitas de manutenção para cada dia da semana.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="openModal('modal-cronograma')" class="bg-mob-dark text-white text-xs font-bold px-4 py-2.5 rounded-lg">
+                            <i class="fa-solid fa-plus text-mob-teal"></i> Agendar Visita
+                        </button>
+                        <button onclick="printCronograma()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg flex items-center gap-2">
+                            <i class="fa-solid fa-print"></i> Imprimir Cronograma
+                        </button>
+                    </div>
+                </div>
+                <div id="cronograma-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3"></div>
+                <div id="printable-cronograma" class="hidden">
+                    <div class="bg-white p-8 max-w-5xl mx-auto">
+                        <div class="flex justify-between items-center border-b-2 border-slate-900 pb-4 mb-6">
+                            <div class="flex items-center gap-3">
+                                <span class="font-black text-2xl tracking-tighter text-black"><span class="text-[#00C4B4]">MOB</span> CELL</span>
+                                <span class="text-slate-300 font-light text-xl">|</span>
+                                <span class="font-extrabold text-xl tracking-tight text-black flex items-center gap-1.5">
+                                    <span class="w-3 h-3 rounded-full bg-[#8cc63f]"></span> tcase
+                                </span>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold uppercase text-sm text-slate-800">Cronograma Semanal de Manutenções</p>
+                                <p class="text-xs text-slate-500" id="print-crono-data"></p>
+                            </div>
+                        </div>
+                        <div id="print-crono-conteudo" class="grid grid-cols-2 gap-4"></div>
+                        <div class="mt-8 pt-4 border-t text-center text-xs text-slate-500">
+                            <p>Documento gerado automaticamente pelo Sistema de Gestão de Manutenção</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ESTOQUE -->
+            <div id="tab-estoque" class="tab-content hidden space-y-6">
+                <div class="bg-white p-4 rounded-xl shadow-sm border flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <h2 class="font-bold text-base text-slate-800">Estoque Geral de Insumos</h2>
+                        <p class="text-xs text-slate-500">Mapeamento de quantidades físicas para suporte das 12 filiais.</p>
+                    </div>
+                    <button onclick="openStockModal()" class="bg-mob-dark text-white text-xs font-bold px-4 py-2.5 rounded-lg">
+                        <i class="fa-solid fa-plus text-mob-teal"></i> Cadastrar Item
+                    </button>
+                </div>
+                <div class="bg-white p-3 rounded-xl shadow-sm border no-print">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="stock-search" oninput="renderStock()" placeholder="Buscar insumo por nome ou categoria..." class="w-full pl-8 pr-3 py-2 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-mob-teal/30">
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 border-b font-semibold uppercase text-slate-500">
+                            <tr><th class="p-3">Insumo / Produto</th><th class="p-3">Categoria</th><th class="p-3 text-center">Qtd Atual</th><th class="p-3 text-center">Qtd Mínima (Alerta)</th><th class="p-3 text-center">Situação</th><th class="p-3 text-right">Ação</th></tr>
+                        </thead>
+                        <tbody id="stock-table-body" class="divide-y"></tbody>
+                    </table>
+                </div>
+                <div class="bg-slate-900 text-white p-5 rounded-xl space-y-3">
+                    <h3 class="font-bold text-mob-teal text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-boxes-packing"></i> Alerta de Reposição Necessária
+                    </h3>
+                    <div id="sugestao-compra-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs"></div>
+                </div>
+            </div>
+
+            <!-- GERENTES -->
+            <div id="tab-gerentes" class="tab-content hidden space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border">
+                    <h2 class="font-bold text-base text-slate-800">Gerentes por Filial</h2>
+                    <p class="text-xs text-slate-500">Cadastre, edite os contatos e gere links de solicitação para cada loja.</p>
+                </div>
+                <div id="managers-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <div id="gerente-links-section" class="bg-white p-4 rounded-xl shadow-sm border space-y-3">
+                    <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-link text-mob-teal"></i> Links de Solicitação por Filial
+                    </h3>
+                    <p class="text-xs text-slate-500">Copie o link e envie para o gerente da respectiva filial. Cada link é exclusivo e já direciona para a filial correta.</p>
+                    <div id="gerente-links-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+                </div>
+            </div>
+
+            <!-- TERMO -->
+            <div id="tab-termo" class="tab-content hidden space-y-6">
+                <div class="bg-white p-4 rounded-xl shadow-sm border flex flex-wrap justify-between items-center gap-4 no-print">
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800">Termo Oficial de Vistoria da Filial</h2>
+                        <p class="text-xs text-slate-500">Gere o documento impresso para o gerente preencher e assinar.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <select id="termo-select-filial" onchange="updateTermData()" class="border p-2 rounded-lg text-xs font-bold bg-slate-50 border-slate-300"></select>
+                        <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-2">
+                            <i class="fa-solid fa-print"></i> Imprimir Termo
+                        </button>
+                    </div>
+                </div>
+                <div id="printable-area" class="bg-white p-10 rounded-xl shadow-sm border border-slate-200 max-w-3xl mx-auto space-y-6 text-slate-900">
+                    <div class="flex justify-between items-center border-b-2 border-slate-900 pb-4" id="termo-header-brand"></div>
+                    <div class="grid grid-cols-2 bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs gap-4">
+                        <div>
+                            <p class="text-slate-500 uppercase text-[10px] font-bold">Unidade de Atendimento:</p>
+                            <p class="font-extrabold text-sm text-slate-800" id="termo-doc-filial">-</p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 uppercase text-[10px] font-bold">Gerente Responsável:</p>
+                            <p class="font-bold text-sm text-slate-800" id="termo-doc-gerente">Não informado</p>
+                            <p class="text-[11px] text-slate-500" id="termo-doc-contato"></p>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <p class="font-bold text-xs uppercase tracking-wider text-slate-800">1. Relação de Itens Que Necessitam de Manutenção / Troca:</p>
+                        <div class="border rounded-lg overflow-hidden border-slate-300">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead class="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">
+                                    <tr><th class="p-2 border-r border-slate-300 w-12 text-center">Nº</th><th class="p-2 border-r border-slate-300">Item / Problema Identificado na Filial</th><th class="p-2 w-32 text-center">Qtd Estimada</th></tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-300">
+                                    <tr><td class="p-3 border-r text-center font-bold text-slate-400">01</td><td class="p-3 border-r"></td><td class="p-3"></td></tr>
+                                    <tr><td class="p-3 border-r text-center font-bold text-slate-400">02</td><td class="p-3 border-r"></td><td class="p-3"></td></tr>
+                                    <tr><td class="p-3 border-r text-center font-bold text-slate-400">03</td><td class="p-3 border-r"></td><td class="p-3"></td></tr>
+                                    <tr><td class="p-3 border-r text-center font-bold text-slate-400">04</td><td class="p-3 border-r"></td><td class="p-3"></td></tr>
+                                    <tr><td class="p-3 border-r text-center font-bold text-slate-400">05</td><td class="p-3 border-r"></td><td class="p-3"></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="pt-16 grid grid-cols-2 gap-10 text-center text-xs">
+                        <div class="border-t border-slate-800 pt-2"><p class="font-bold text-slate-800">Assinatura do Gerente da Loja</p></div>
+                        <div class="border-t border-slate-800 pt-2"><p class="font-bold text-slate-800">Auditoria / Infraestrutura</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RELATÓRIO EXECUTIVO -->
+            <div id="tab-relatorio" class="tab-content hidden space-y-6">
+                <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center no-print">
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800">Relatório Executivo Consolidador</h2>
+                        <p class="text-xs text-slate-500">Visão da rede para acompanhamento e tomada de decisão.</p>
+                    </div>
+                    <button onclick="window.print()" class="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-lg">
+                        <i class="fa-solid fa-print text-mob-teal"></i> Imprimir Relatório
+                    </button>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border space-y-6">
+                    <div class="border-b pb-4 flex justify-between items-center">
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <span class="font-black text-2xl tracking-tighter text-black"><span class="text-[#00C4B4]">MOB</span> CELL</span>
+                                <span class="text-slate-300 font-light text-xl">|</span>
+                                <span class="font-extrabold text-xl tracking-tight text-black flex items-center gap-1.5">
+                                    <span class="w-3 h-3 rounded-full bg-[#8cc63f]"></span> tcase
+                                </span>
+                            </div>
+                            <h3 class="text-xs font-bold uppercase text-slate-500 mt-2">Relatório Sintético de Manutenção das 12 Filiais</h3>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <h4 class="font-bold text-xs uppercase text-slate-500">Status Atual por Unidade</h4>
+                        <div id="exec-report-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RELATÓRIO DETALHADO -->
+            <div id="tab-relatorio-detalhado" class="tab-content hidden space-y-6">
+                <div class="bg-white p-4 rounded-xl shadow-sm border flex flex-wrap justify-between items-center gap-4 no-print">
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800">Relatório Detalhado de Operações</h2>
+                        <p class="text-xs text-slate-500">Histórico completo de solicitações, ordens de serviço e execuções.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <select id="rel-detal-filial" onchange="renderRelatorioDetalhado()" class="border p-2 rounded-lg text-xs font-bold bg-slate-50 border-slate-300">
+                            <option value="">Todas as Filiais</option>
+                        </select>
+                        <button onclick="printRelatorioDetalhado()" class="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-lg">
+                            <i class="fa-solid fa-print text-mob-teal"></i> Imprimir
+                        </button>
+                    </div>
+                </div>
+                <div id="relatorio-detalhado-conteudo" class="space-y-6"></div>
+                <div id="printable-relatorio" class="hidden">
+                    <div class="bg-white p-10 max-w-5xl mx-auto">
+                        <div class="flex justify-between items-center border-b-2 border-slate-900 pb-4 mb-6">
+                            <div class="flex items-center gap-3">
+                                <span class="font-black text-2xl tracking-tighter text-black"><span class="text-[#00C4B4]">MOB</span> CELL</span>
+                                <span class="text-slate-300 font-light text-xl">|</span>
+                                <span class="font-extrabold text-xl tracking-tight text-black flex items-center gap-1.5">
+                                    <span class="w-3 h-3 rounded-full bg-[#8cc63f]"></span> tcase
+                                </span>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold uppercase text-sm text-slate-800">Relatório Detalhado de Operações</p>
+                                <p class="text-xs text-slate-500" id="print-rel-data"></p>
+                            </div>
+                        </div>
+                        <div id="print-rel-conteudo"></div>
+                        <div class="mt-8 pt-4 border-t text-center text-xs text-slate-500">
+                            <p>Documento gerado automaticamente pelo Sistema de Gestão de Manutenção</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANEXOS -->
+            <div id="tab-anexos" class="tab-content hidden space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center">
+                    <div>
+                        <h2 class="font-bold text-base text-slate-800">Anexos e Fotos por Filial</h2>
+                        <p class="text-xs text-slate-500">Links para pastas no Google Drive com registros das unidades.</p>
+                    </div>
+                    <button onclick="openModal('modal-attachment')" class="bg-mob-dark text-white text-xs font-bold px-4 py-2.5 rounded-lg">
+                        <i class="fa-solid fa-link text-mob-teal"></i> Vincular Link
+                    </button>
+                </div>
+                <div id="attachments-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL DE ORDEM (ATUALIZADO COM SOLICITAÇÕES) -->
     <div id="modal-maintenance" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-xl p-6 max-w-lg w-full space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
             <h3 class="font-bold text-sm text-slate-900">Nova Ordem de Manutenção</h3>
             <form onsubmit="saveMaintenance(event)" class="space-y-3 text-xs">
                 <div>
                     <label class="font-bold text-slate-600">Filial:</label>
-                    <select id="m-filial" required class="w-full border p-2 rounded mt-1 bg-slate-50"></select>
+                    <select id="m-filial" required onchange="carregarSolicitacoesParaOS()" class="w-full border p-2 rounded mt-1 bg-slate-50"></select>
+                </div>
+                <div id="bloco-solicitacoes-os" class="hidden border border-indigo-200 bg-indigo-50 rounded-lg p-3 space-y-2">
+                    <p class="text-xs font-bold text-indigo-800 flex items-center gap-1.5">
+                        <i class="fa-solid fa-clipboard-check"></i> Itens Solicitados pelo Gerente (selecione para incluir):
+                    </p>
+                    <div id="lista-solicitacoes-os" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
+                    <button type="button" onclick="adicionarItensSelecionadosOS()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 rounded text-[11px]">
+                        <i class="fa-solid fa-check mr-1"></i> Adicionar Itens Selecionados à OS
+                    </button>
                 </div>
                 <div>
                     <label class="font-bold text-slate-600">Descrição Geral do Serviço / Problema:</label>
@@ -607,7 +790,6 @@
                     <p class="text-xs text-slate-500" id="os-numero">Nº ---</p>
                 </div>
             </div>
-
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <div class="bg-slate-50 p-3 rounded border border-slate-200">
                     <p class="text-[10px] text-slate-500 uppercase font-bold">Filial</p>
@@ -626,12 +808,10 @@
                     <p class="font-bold text-sm text-amber-700">PENDENTE</p>
                 </div>
             </div>
-
             <div class="mb-6">
                 <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Descrição do Serviço / Problema</p>
                 <div class="border border-slate-300 rounded p-3 min-h-[60px] text-sm text-slate-800" id="os-descricao">-</div>
             </div>
-
             <div class="mb-6">
                 <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Insumos / Peças Necessárias</p>
                 <table class="w-full text-left text-xs border border-slate-300">
@@ -641,12 +821,10 @@
                     <tbody id="os-insumos" class="divide-y divide-slate-300"></tbody>
                 </table>
             </div>
-
             <div class="mb-6">
                 <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Relatório de Execução (preencher após conclusão)</p>
                 <div class="border border-slate-300 rounded p-3 min-h-[100px] text-sm text-slate-800"></div>
             </div>
-
             <div class="grid grid-cols-2 gap-10 text-center text-xs mt-12">
                 <div class="border-t border-slate-800 pt-2">
                     <p class="font-bold text-slate-800">Assinatura do Responsável Técnico</p>
@@ -684,12 +862,34 @@
         window.managersData = {};
         window.attachmentData = [];
         window.cronogramaData = {};
+        window.solicitacoesData = [];
         let currentOrderStockItems = [];
+        let itensSolicitacaoGerente = [];
+        let solicitacoesSelecionadasOS = [];
+
+        // ====== DETECÇÃO DE MODO ======
+        const urlParams = new URLSearchParams(window.location.search);
+        const modoGerente = urlParams.get('modo') === 'gerente';
+        const filialGerenteParam = urlParams.get('filial');
 
         document.addEventListener("DOMContentLoaded", () => {
-            populateSelects();
-            renderFilialDetail();
+            if (modoGerente && filialGerenteParam && FILIAIS.includes(filialGerenteParam)) {
+                document.getElementById('modo-gerente').classList.remove('hidden');
+                document.getElementById('modo-auditor').classList.add('hidden');
+                document.getElementById('gerente-filial-nome').textContent = filialGerenteParam;
+                initGerenteMode();
+            } else {
+                document.getElementById('modo-gerente').classList.add('hidden');
+                document.getElementById('modo-auditor').classList.remove('hidden');
+                populateSelects();
+                renderFilialDetail();
+            }
         });
+
+        function initGerenteMode() {
+            // Preenche o select de filial no modo auditor também
+            populateSelects();
+        }
 
         function isTcase(filialName) {
             return TCASE_FILIAIS.includes(filialName);
@@ -725,12 +925,33 @@
             ['m-filial', 'select-filial-filtro', 'termo-select-filial', 'att-filial', 'cron-filial'].forEach(function(sId) {
                 var sel = document.getElementById(sId);
                 if (!sel) return;
+                var oldVal = sel.value;
                 sel.innerHTML = '';
                 FILIAIS.forEach(function(f) { 
                     var brandLabel = isTcase(f) ? ' [T-CASE]' : ' [MOB CELL]';
                     sel.innerHTML += '<option value="' + f + '">' + f + brandLabel + '</option>'; 
                 });
+                if (oldVal) sel.value = oldVal;
             });
+
+            // Filtro de solicitações
+            var filtroSol = document.getElementById('filtro-solicitacao-filial');
+            if (filtroSol) {
+                filtroSol.innerHTML = '<option value="">Todas as Filiais</option>';
+                FILIAIS.forEach(function(f) {
+                    filtroSol.innerHTML += '<option value="' + f + '">' + f + '</option>';
+                });
+            }
+
+            // Filtro relatório detalhado
+            var relDet = document.getElementById('rel-detal-filial');
+            if (relDet) {
+                relDet.innerHTML = '<option value="">Todas as Filiais</option>';
+                FILIAIS.forEach(function(f) {
+                    relDet.innerHTML += '<option value="' + f + '">' + f + '</option>';
+                });
+            }
+
             populateStockSelect();
         }
 
@@ -742,6 +963,464 @@
                     stockSel.innerHTML += '<option value="' + s.id + '" data-nome="' + s.nome + '" data-qtd="' + s.qtd + '">' + s.nome + ' (Disp: ' + s.qtd + ')</option>';
                 });
             }
+        }
+
+        // ====== MODO GERENTE ======
+        function adicionarItemSolicitacao() {
+            var desc = document.getElementById('sg-item').value.trim();
+            var qtd = Number(document.getElementById('sg-qtd').value);
+            var prio = document.getElementById('sg-prioridade').value;
+            if (!desc) { showToast('Informe a descrição do item.', 'error'); return; }
+
+            itensSolicitacaoGerente.push({
+                id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                descricao: desc,
+                qtd: qtd,
+                prioridade: prio,
+                status: 'Pendente'
+            });
+
+            document.getElementById('sg-item').value = '';
+            document.getElementById('sg-qtd').value = '1';
+            document.getElementById('sg-prioridade').value = 'Média';
+            renderItensSolicitacaoGerente();
+        }
+
+        function removerItemSolicitacao(index) {
+            itensSolicitacaoGerente.splice(index, 1);
+            renderItensSolicitacaoGerente();
+        }
+
+        function renderItensSolicitacaoGerente() {
+            var container = document.getElementById('sg-itens-lista');
+            if (!container) return;
+            container.innerHTML = '';
+            if (itensSolicitacaoGerente.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhum item adicionado ainda.</p>';
+                return;
+            }
+            itensSolicitacaoGerente.forEach(function(item, idx) {
+                var prioColor = { "Urgente": "text-rose-600", "Alta": "text-orange-600", "Média": "text-amber-600", "Baixa": "text-slate-500" }[item.prioridade];
+                container.innerHTML += '<div class="flex items-center justify-between bg-slate-100 p-2.5 rounded-lg text-xs border border-slate-200 fade-in">' +
+                    '<div class="flex-1"><span class="font-bold">' + item.qtd + 'x</span> ' + item.descricao + ' <span class="font-semibold ' + prioColor + '">(' + item.prioridade + ')</span></div>' +
+                    '<button type="button" onclick="removerItemSolicitacao(' + idx + ')" class="text-rose-500 font-bold hover:underline ml-2">Remover</button></div>';
+            });
+        }
+
+        async function enviarSolicitacaoGerente(e) {
+            e.preventDefault();
+            if (itensSolicitacaoGerente.length === 0) {
+                showToast('Adicione pelo menos um item à solicitação.', 'error');
+                return;
+            }
+            var btn = document.getElementById('btn-enviar-solicitacao');
+            var originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Enviando...';
+            btn.disabled = true;
+            try {
+                await window.addDoc(window.collection(window.db, "mob_solicitacoes"), {
+                    filialId: filialGerenteParam,
+                    itens: itensSolicitacaoGerente,
+                    observacao: document.getElementById('sg-obs').value.trim(),
+                    dataSolicitacao: new Date().toISOString(),
+                    statusGeral: 'Pendente',
+                    osVinculada: null
+                });
+                itensSolicitacaoGerente = [];
+                renderItensSolicitacaoGerente();
+                document.getElementById('sg-obs').value = '';
+                showToast('Solicitação enviada com sucesso! A auditoria foi notificada.');
+            } catch (err) {
+                alert('Erro ao enviar solicitação: ' + err.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function renderSolicitacoesGerente() {
+            var container = document.getElementById('gerente-historico');
+            if (!container || !filialGerenteParam) return;
+            container.innerHTML = '';
+
+            var solicitacoes = window.solicitacoesData
+                .filter(function(s) { return s.filialId === filialGerenteParam; })
+                .sort(function(a, b) { return new Date(b.dataSolicitacao) - new Date(a.dataSolicitacao); });
+
+            if (solicitacoes.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Nenhuma solicitação enviada ainda.</p>';
+                return;
+            }
+
+            solicitacoes.forEach(function(sol) {
+                var data = new Date(sol.dataSolicitacao).toLocaleDateString('pt-BR');
+                var statusColor = sol.statusGeral === 'Concluido' ? 'bg-emerald-100 text-emerald-700' : 
+                                  sol.statusGeral === 'Parcial' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700';
+                var itensHtml = '';
+                (sol.itens || []).forEach(function(it) {
+                    var stColor = it.status === 'Atendido' ? 'text-emerald-600' : it.status === 'Em OS' ? 'text-amber-600' : 'text-slate-600';
+                    itensHtml += '<li class="text-[11px] ' + stColor + '"><strong>' + it.qtd + 'x</strong> ' + it.descricao + ' (' + it.prioridade + ')</li>';
+                });
+
+                container.innerHTML += '<div class="border rounded-lg p-3 fade-in">' +
+                    '<div class="flex justify-between items-center mb-2">' +
+                    '<span class="text-[10px] text-slate-500">Enviado em ' + data + '</span>' +
+                    '<span class="text-[10px] font-bold px-2 py-0.5 rounded ' + statusColor + '">' + (sol.statusGeral || 'Pendente') + '</span>' +
+                    '</div>' +
+                    '<ul class="space-y-0.5 pl-3">' + itensHtml + '</ul>' +
+                    (sol.observacao ? '<p class="text-[11px] text-slate-500 mt-2 italic">"' + sol.observacao + '"</p>' : '') +
+                    '</div>';
+            });
+        }
+
+        // ====== SOLICITAÇÕES - MODO AUDITOR ======
+        function renderSolicitacoesAuditor() {
+            var container = document.getElementById('solicitacoes-list');
+            var filtro = document.getElementById('filtro-solicitacao-filial');
+            if (!container) return;
+            container.innerHTML = '';
+
+            var filialFiltro = filtro ? filtro.value : '';
+            var solicitacoes = window.solicitacoesData
+                .filter(function(s) {
+                    if (filialFiltro && s.filialId !== filialFiltro) return false;
+                    return s.statusGeral !== 'Concluido';
+                })
+                .sort(function(a, b) { return new Date(b.dataSolicitacao) - new Date(a.dataSolicitacao); });
+
+            if (solicitacoes.length === 0) {
+                container.innerHTML = '<div class="bg-white rounded-xl shadow-sm border p-8 text-center"><p class="text-sm text-slate-400">Nenhuma solicitação pendente encontrada.</p></div>';
+                return;
+            }
+
+            solicitacoes.forEach(function(sol) {
+                var data = new Date(sol.dataSolicitacao).toLocaleDateString('pt-BR');
+                var isTc = isTcase(sol.filialId);
+                var badge = isTc ? '<span class="text-[9px] bg-[#8cc63f] text-black font-extrabold px-1.5 py-0.5 rounded">T-CASE</span>' : '';
+                var itensHtml = '';
+                var todosAtendidos = true;
+                (sol.itens || []).forEach(function(it, idx) {
+                    if (it.status !== 'Atendido') todosAtendidos = false;
+                    var stBadge = it.status === 'Atendido' ? '<span class="text-[9px] bg-emerald-100 text-emerald-700 px-1 rounded">Atendido</span>' : 
+                                  it.status === 'Em OS' ? '<span class="text-[9px] bg-amber-100 text-amber-700 px-1 rounded">Em OS</span>' :
+                                  '<span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded">Pendente</span>';
+                    var prioColor = { "Urgente": "text-rose-600", "Alta": "text-orange-600", "Média": "text-amber-600", "Baixa": "text-slate-500" }[it.prioridade] || "text-slate-500";
+                    itensHtml += '<div class="solicitacao-item flex items-center justify-between p-2 rounded border border-slate-100">' +
+                        '<div class="flex items-center gap-2"><span class="font-bold text-xs text-slate-700">' + it.qtd + 'x</span>' +
+                        '<span class="text-xs text-slate-700">' + it.descricao + '</span>' +
+                        '<span class="text-[10px] font-semibold ' + prioColor + '">' + it.prioridade + '</span></div>' +
+                        '<div class="flex items-center gap-2">' + stBadge + '</div></div>';
+                });
+
+                var btnCriarOS = todosAtendidos ? '' :
+                    '<button onclick="criarOSdaSolicitacao(\'' + sol.id + '\')" class="bg-mob-dark hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg">' +
+                    '<i class="fa-solid fa-plus text-mob-teal mr-1"></i> Criar OS com Itens Pendentes</button>';
+
+                container.innerHTML += '<div class="bg-white rounded-xl shadow-sm border p-4 fade-in">' +
+                    '<div class="flex flex-wrap justify-between items-center gap-2 mb-3 pb-2 border-b">' +
+                    '<div class="flex items-center gap-2">' +
+                    '<span class="font-bold text-sm text-slate-800">' + sol.filialId + '</span>' + badge +
+                    '<span class="text-[10px] text-slate-400">• ' + data + '</span>' +
+                    '</div>' +
+                    '<div class="flex gap-2">' + btnCriarOS +
+                    '<button onclick="excluirSolicitacao(\'' + sol.id + '\')" class="text-rose-500 text-xs font-semibold hover:underline">Excluir</button>' +
+                    '</div></div>' +
+                    '<div class="space-y-1">' + itensHtml + '</div>' +
+                    (sol.observacao ? '<p class="text-[11px] text-slate-500 mt-2 italic bg-slate-50 p-2 rounded">Obs: "' + sol.observacao + '"</p>' : '') +
+                    '</div>';
+            });
+        }
+
+        async function excluirSolicitacao(id) {
+            if (!confirm("Deseja excluir esta solicitação permanentemente?")) return;
+            try {
+                await window.deleteDoc(window.doc(window.db, "mob_solicitacoes", id));
+                showToast('Solicitação excluída!');
+            } catch (err) {
+                alert('Erro ao excluir: ' + err.message);
+            }
+        }
+
+        function criarOSdaSolicitacao(solicitacaoId) {
+            var sol = window.solicitacoesData.find(function(s) { return s.id === solicitacaoId; });
+            if (!sol) return;
+
+            // Abre modal de OS e pré-preenche
+            document.getElementById('m-filial').value = sol.filialId;
+            carregarSolicitacoesParaOS();
+
+            // Marca os itens pendentes da solicitação
+            setTimeout(function() {
+                var checkboxes = document.querySelectorAll('.chk-solicitacao-os');
+                checkboxes.forEach(function(chk) {
+                    var solId = chk.getAttribute('data-solicitacao-id');
+                    if (solId === solicitacaoId) {
+                        chk.checked = true;
+                    }
+                });
+            }, 100);
+
+            openModal('modal-maintenance');
+        }
+
+        // ====== CARREGAR SOLICITAÇÕES NO MODAL DE OS ======
+        function carregarSolicitacoesParaOS() {
+            var filial = document.getElementById('m-filial').value;
+            var bloco = document.getElementById('bloco-solicitacoes-os');
+            var lista = document.getElementById('lista-solicitacoes-os');
+            if (!bloco || !lista) return;
+
+            var solicitacoes = window.solicitacoesData.filter(function(s) {
+                return s.filialId === filial && s.statusGeral !== 'Concluido';
+            });
+
+            if (solicitacoes.length === 0) {
+                bloco.classList.add('hidden');
+                return;
+            }
+
+            bloco.classList.remove('hidden');
+            lista.innerHTML = '';
+
+            solicitacoes.forEach(function(sol) {
+                (sol.itens || []).forEach(function(item, idx) {
+                    if (item.status === 'Atendido') return;
+                    var itemId = sol.id + '_item_' + idx;
+                    lista.innerHTML += '<label class="flex items-center gap-2 p-1.5 rounded hover:bg-indigo-100 cursor-pointer">' +
+                        '<input type="checkbox" class="chk-solicitacao-os w-4 h-4 text-indigo-600 rounded" ' +
+                        'data-solicitacao-id="' + sol.id + '" ' +
+                        'data-item-index="' + idx + '" ' +
+                        'data-descricao="' + item.descricao + '" ' +
+                        'data-qtd="' + item.qtd + '" ' +
+                        'data-prioridade="' + item.prioridade + '">' +
+                        '<span class="text-xs text-slate-700"><strong>' + item.qtd + 'x</strong> ' + item.descricao + 
+                        ' <span class="text-[10px] text-slate-400">(' + item.prioridade + ')</span></span></label>';
+                });
+            });
+
+            if (lista.innerHTML === '') {
+                bloco.classList.add('hidden');
+            }
+        }
+
+        function adicionarItensSelecionadosOS() {
+            var checkboxes = document.querySelectorAll('.chk-solicitacao-os:checked');
+            if (checkboxes.length === 0) {
+                showToast('Selecione pelo menos um item.', 'warning');
+                return;
+            }
+
+            var descricoes = [];
+            checkboxes.forEach(function(chk) {
+                var desc = chk.getAttribute('data-descricao');
+                var qtd = chk.getAttribute('data-qtd');
+                var prio = chk.getAttribute('data-prioridade');
+                descricoes.push(qtd + 'x ' + desc + ' (' + prio + ')');
+
+                solicitacoesSelecionadasOS.push({
+                    solicitacaoId: chk.getAttribute('data-solicitacao-id'),
+                    itemIndex: Number(chk.getAttribute('data-item-index')),
+                    descricao: desc,
+                    qtd: Number(qtd),
+                    prioridade: prio
+                });
+            });
+
+            // Atualiza descrição da OS
+            var descAtual = document.getElementById('m-desc').value.trim();
+            var novaDesc = 'Solicitação do gerente: ' + descricoes.join('; ');
+            document.getElementById('m-desc').value = descAtual ? descAtual + ' | ' + novaDesc : novaDesc;
+
+            // Define prioridade mais alta entre os itens
+            var prioridades = Array.from(checkboxes).map(function(c) { return c.getAttribute('data-prioridade'); });
+            if (prioridades.includes('Urgente')) document.getElementById('m-prio').value = 'Urgente';
+            else if (prioridades.includes('Alta')) document.getElementById('m-prio').value = 'Alta';
+            else if (prioridades.includes('Média')) document.getElementById('m-prio').value = 'Média';
+
+            showToast(checkboxes.length + ' item(s) adicionado(s) à OS!');
+
+            // Desmarca checkboxes
+            checkboxes.forEach(function(chk) { chk.checked = false; });
+        }
+
+        // ====== DASHBOARD ======
+        function renderDashboard() {
+            var pendentes = window.maintenanceData.filter(function(m) { return m.status !== 'Concluído'; }).length;
+            var concluidas = window.maintenanceData.filter(function(m) { return m.status === 'Concluído'; }).length;
+            var compras = window.stockData.filter(function(s) { return s.qtd <= s.min; }).length;
+            var solicitacoesPendentes = window.solicitacoesData.filter(function(s) { return s.statusGeral !== 'Concluido'; }).length;
+
+            document.getElementById('dash-pendentes').textContent = pendentes;
+            document.getElementById('dash-concluidas').textContent = concluidas;
+            document.getElementById('dash-compras') && (document.getElementById('dash-compras').textContent = compras);
+            var elSol = document.getElementById('dash-solicitacoes');
+            if (elSol) elSol.textContent = solicitacoesPendentes;
+
+            // Solicitações recentes no dashboard
+            var recentesContainer = document.getElementById('dash-solicitacoes-recentes');
+            if (recentesContainer) {
+                recentesContainer.innerHTML = '';
+                var recentes = window.solicitacoesData
+                    .filter(function(s) { return s.statusGeral !== 'Concluido'; })
+                    .sort(function(a, b) { return new Date(b.dataSolicitacao) - new Date(a.dataSolicitacao); })
+                    .slice(0, 5);
+                if (recentes.length === 0) {
+                    recentesContainer.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">Nenhuma solicitação pendente.</p>';
+                } else {
+                    recentes.forEach(function(s) {
+                        var data = new Date(s.dataSolicitacao).toLocaleDateString('pt-BR');
+                        var qtdItens = (s.itens || []).length;
+                        recentesContainer.innerHTML += '<div class="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-100">' +
+                            '<div class="flex items-center gap-2"><span class="text-xs font-bold text-slate-700">' + s.filialId + '</span>' +
+                            '<span class="text-[10px] text-slate-500">' + qtdItens + ' item(s) • ' + data + '</span></div>' +
+                            '<button onclick="switchTab(\'solicitacoes\')" class="text-[10px] text-indigo-600 font-bold hover:underline">Ver</button></div>';
+                    });
+                }
+            }
+
+            // Insumos em alerta no dashboard
+            var alertaContainer = document.getElementById('dash-insumos-alerta');
+            if (alertaContainer) {
+                alertaContainer.innerHTML = '';
+                var alertas = window.stockData.filter(function(s) { return s.qtd <= s.min; }).slice(0, 5);
+                if (alertas.length === 0) {
+                    alertaContainer.innerHTML = '<p class="text-xs text-emerald-600 text-center py-2">✅ Todos os insumos OK</p>';
+                } else {
+                    alertas.forEach(function(s) {
+                        alertaContainer.innerHTML += '<div class="flex items-center justify-between p-2 bg-rose-50 rounded-lg border border-rose-100">' +
+                            '<span class="text-xs font-semibold text-rose-700">' + s.nome + '</span>' +
+                            '<span class="text-[10px] font-bold text-rose-600">' + s.qtd + '/' + s.min + '</span></div>';
+                    });
+                }
+            }
+        }
+
+        // ====== RELATÓRIO DETALHADO ======
+        function renderRelatorioDetalhado() {
+            var container = document.getElementById('relatorio-detalhado-conteudo');
+            var filtroEl = document.getElementById('rel-detal-filial');
+            if (!container) return;
+            container.innerHTML = '';
+
+            var filtro = filtroEl ? filtroEl.value : '';
+            var filiaisParaRel = filtro ? [filtro] : FILIAIS;
+
+            filiaisParaRel.forEach(function(f) {
+                var sols = window.solicitacoesData.filter(function(s) { return s.filialId === f; });
+                var oss = window.maintenanceData.filter(function(m) { return m.filialId === f; });
+                var pendentes = oss.filter(function(m) { return m.status !== 'Concluído'; });
+                var concluidas = oss.filter(function(m) { return m.status === 'Concluído'; });
+                var isTc = isTcase(f);
+
+                var totalItensSolicitados = 0;
+                var totalItensAtendidos = 0;
+                var totalItensEmOS = 0;
+                sols.forEach(function(s) {
+                    (s.itens || []).forEach(function(it) {
+                        totalItensSolicitados++;
+                        if (it.status === 'Atendido') totalItensAtendidos++;
+                        else if (it.status === 'Em OS') totalItensEmOS++;
+                    });
+                });
+
+                var taxaAtendimento = totalItensSolicitados > 0 ? Math.round((totalItensAtendidos / totalItensSolicitados) * 100) : 0;
+
+                var osHtml = '';
+                concluidas.slice(0, 5).forEach(function(os) {
+                    osHtml += '<div class="text-[11px] text-slate-600 pl-3 border-l-2 border-emerald-300">' +
+                        '<strong>' + os.descricao + '</strong> — ' + (os.dataConclusao || '-') +
+                        (os.relatorio ? '<p class="text-slate-400 italic mt-0.5">"' + os.relatorio + '"</p>' : '') +
+                        '</div>';
+                });
+
+                var solHtml = '';
+                sols.slice(0, 5).forEach(function(s) {
+                    var itens = (s.itens || []).map(function(it) {
+                        var st = it.status === 'Atendido' ? '✅' : it.status === 'Em OS' ? '⏳' : '⏸️';
+                        return st + ' ' + it.qtd + 'x ' + it.descricao;
+                    }).join(', ');
+                    solHtml += '<div class="text-[11px] text-slate-600 pl-3 border-l-2 border-indigo-300">' +
+                        '<span class="font-semibold">' + new Date(s.dataSolicitacao).toLocaleDateString('pt-BR') + ':</span> ' + itens + '</div>';
+                });
+
+                container.innerHTML += '<div class="bg-white rounded-xl shadow-sm border p-5 fade-in">' +
+                    '<div class="flex items-center justify-between mb-4 pb-2 border-b">' +
+                    '<div class="flex items-center gap-2">' +
+                    '<span class="font-bold text-sm text-slate-800">' + f + '</span>' +
+                    (isTc ? '<span class="text-[9px] bg-[#8cc63f] text-black font-extrabold px-1.5 py-0.5 rounded">T-CASE</span>' : '') +
+                    '</div>' +
+                    '<div class="flex gap-3 text-[10px] font-bold">' +
+                    '<span class="text-indigo-600">Solicitações: ' + sols.length + '</span>' +
+                    '<span class="text-amber-600">OS Pendentes: ' + pendentes.length + '</span>' +
+                    '<span class="text-emerald-600">OS Concluídas: ' + concluidas.length + '</span>' +
+                    '</div></div>' +
+                    '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+                    '<div class="space-y-2">' +
+                    '<p class="text-[10px] font-bold uppercase text-slate-400">Solicitações Recentes</p>' +
+                    (solHtml || '<p class="text-[11px] text-slate-400">Nenhuma solicitação.</p>') +
+                    '</div>' +
+                    '<div class="space-y-2">' +
+                    '<p class="text-[10px] font-bold uppercase text-slate-400">OS Concluídas Recentes</p>' +
+                    (osHtml || '<p class="text-[11px] text-slate-400">Nenhuma OS concluída.</p>') +
+                    '</div></div>' +
+                    '<div class="mt-3 pt-3 border-t flex items-center gap-4">' +
+                    '<div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">' +
+                    '<div class="bg-emerald-500 h-full rounded-full" style="width:' + taxaAtendimento + '%"></div></div>' +
+                    '<span class="text-[10px] font-bold text-slate-600">Taxa de Atendimento: ' + taxaAtendimento + '%</span>' +
+                    '</div></div>';
+            });
+        }
+
+        function printRelatorioDetalhado() {
+            var container = document.getElementById('print-rel-conteudo');
+            var dataEl = document.getElementById('print-rel-data');
+            dataEl.textContent = 'Gerado em: ' + new Date().toLocaleDateString('pt-BR');
+            container.innerHTML = document.getElementById('relatorio-detalhado-conteudo').innerHTML;
+            var printable = document.getElementById('printable-relatorio');
+            printable.classList.remove('hidden');
+            window.print();
+            setTimeout(function() { printable.classList.add('hidden'); }, 500);
+        }
+
+        // ====== GERENTE LINKS ======
+        function renderGerenteLinks() {
+            var grid = document.getElementById('gerente-links-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            var baseUrl = window.location.origin + window.location.pathname;
+
+            FILIAIS.forEach(function(f) {
+                var mgr = window.managersData[f] || { nome: 'Não Cadastrado' };
+                var link = baseUrl + '?modo=gerente&filial=' + encodeURIComponent(f);
+                var isTc = isTcase(f);
+                var badgeClass = isTc ? 'bg-[#8cc63f] text-black' : 'bg-slate-900 text-mob-teal';
+
+                grid.innerHTML += '<div class="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">' +
+                    '<div class="flex items-center justify-between">' +
+                    '<span class="font-bold text-xs px-2 py-0.5 rounded ' + badgeClass + '">' + f + '</span>' +
+                    '<span class="text-[10px] text-slate-500">' + mgr.nome + '</span>' +
+                    '</div>' +
+                    '<div class="flex gap-1">' +
+                    '<input type="text" value="' + link + '" readonly class="flex-1 text-[10px] bg-white border border-slate-300 rounded px-2 py-1 truncate">' +
+                    '<button onclick="copiarLinkGerente(\'' + link + '\')" class="bg-mob-dark text-white text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-800">' +
+                    '<i class="fa-solid fa-copy"></i></button>' +
+                    '</div></div>';
+            });
+        }
+
+        function copiarLinkGerente(link) {
+            navigator.clipboard.writeText(link).then(function() {
+                showToast('Link copiado para a área de transferência!');
+            }).catch(function() {
+                // Fallback
+                var ta = document.createElement('textarea');
+                ta.value = link;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('Link copiado!');
+            });
         }
 
         function addStockItemToOrder() {
@@ -785,15 +1464,6 @@
             });
         }
 
-        function renderDashboard() {
-            var pendentes = window.maintenanceData.filter(function(m) { return m.status !== 'Concluído'; }).length;
-            var concluidas = window.maintenanceData.filter(function(m) { return m.status === 'Concluído'; }).length;
-            var compras = window.stockData.filter(function(s) { return s.qtd <= s.min; }).length;
-            document.getElementById('dash-pendentes').textContent = pendentes;
-            document.getElementById('dash-concluidas').textContent = concluidas;
-            document.getElementById('dash-compras').textContent = compras;
-        }
-
         function renderMaintenance() {
             renderFilialDetail();
         }
@@ -825,7 +1495,7 @@
                     "Baixa": "bg-slate-100 text-slate-600"
                 }[m.prioridade] || "bg-amber-100 text-amber-800";
 
-                tbPendentes.innerHTML += '<tr class="fade-in"><td class="p-2 font-semibold text-slate-800">' + m.descricao + '<span class="ml-1 text-[9px] font-bold px-1.5 py-0.5 rounded ' + prioColor + '">' + m.prioridade + '</span></td><td class="p-2 text-slate-600">' + insumosTxt + '</td><td class="p-2 text-center"><span class="bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded text-[10px]">PENDENTE</span></td><td class="p-2 text-right space-x-1"><button onclick="openCompleteModal(\'' + m.id + '\')" class="text-emerald-600 font-bold hover:underline">Concluir</button><span class="text-slate-300">|</span><button onclick="printOS(\'' + m.id + '\')" class="text-indigo-600 font-bold hover:underline"><i class="fa-solid fa-print"></i> OS</button><span class="text-slate-300">|</span><button onclick="deleteDocItem(\'mob_manutencao\', \'' + m.id + '\')" class="text-rose-500 font-semibold">Excluir</button></td></tr>';
+                tbPendentes.innerHTML += '<tr class="fade-in"><td class="p-2 font-semibold text-slate-800">' + m.descricao + '<span class="ml-1 text-[9px] font-bold px-1.5 py-0.5 rounded ' + prioColor + '">' + m.prioridade + '</span></td><td class="p-2 text-slate-600">' + insumosTxt + '</td><td class="p-2 text-center"><span class="bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded text-[10px]">PENDENTE</span></td><td class="p-2 text-right space-x-1"><button onclick="openCompleteModal(\'' + m.id + '\')" class="text-emerald-600 font-bold hover:underline">Concluir</button><span class="text-slate-300">|</span><button onclick="printOS(\'' + m.id + '\')" class="text-indigo-600 font-bold hover:underline"><i class="fa-solid fa-print"></i> OS</button><span class="text-slate-300">|</span><button onclick="deleteDocItem(\'mob_manutencao\', \' + m.id + ')" class="text-rose-500 font-semibold">Excluir</button></td></tr>';
             });
 
             var concluidos = items.filter(function(m) { return m.status === 'Concluído'; }).sort(function(a, b) {
@@ -838,7 +1508,7 @@
                 var relatorioHtml = m.relatorio 
                     ? '<div class="mt-1 text-[10px] text-slate-500 bg-slate-50 p-1.5 rounded border border-slate-100 italic">"' + m.relatorio + '"</div>' 
                     : '';
-                tbConcluidos.innerHTML += '<tr class="fade-in"><td class="p-2"><span class="font-semibold text-slate-700">' + m.descricao + '</span>' + relatorioHtml + '</td><td class="p-2 text-center font-bold text-slate-500">' + (m.dataConclusao || '-') + '</td><td class="p-2 text-right"><button onclick="deleteDocItem(\'mob_manutencao\', \'' + m.id + '\')" class="text-rose-500 font-semibold">Excluir</button></td></tr>';
+                tbConcluidos.innerHTML += '<tr class="fade-in"><td class="p-2"><span class="font-semibold text-slate-700">' + m.descricao + '</span>' + relatorioHtml + '</td><td class="p-2 text-center font-bold text-slate-500">' + (m.dataConclusao || '-') + '</td><td class="p-2 text-right"><button onclick="deleteDocItem(\'mob_manutencao\', \' + m.id + ')" class="text-rose-500 font-semibold">Excluir</button></td></tr>';
             });
 
             if (tbPendentes.innerHTML === '') tbPendentes.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-slate-400">Nenhuma pendência cadastrada para esta filial.</td></tr>';
@@ -858,15 +1528,51 @@
             btn.textContent = 'Salvando...';
             btn.disabled = true;
             try {
-                await window.addDoc(window.collection(window.db, "mob_manutencao"), {
-                    filialId: document.getElementById('m-filial').value,
-                    descricao: document.getElementById('m-desc').value,
-                    prioridade: document.getElementById('m-prio').value,
+                var filialId = document.getElementById('m-filial').value;
+                var descricao = document.getElementById('m-desc').value;
+                var prioridade = document.getElementById('m-prio').value;
+
+                // Cria a OS
+                var osRef = await window.addDoc(window.collection(window.db, "mob_manutencao"), {
+                    filialId: filialId,
+                    descricao: descricao,
+                    prioridade: prioridade,
                     items: currentOrderStockItems,
                     status: "Pendente",
                     dataCriacao: new Date().toISOString()
                 });
+
+                // Atualiza status dos itens das solicitações vinculadas
+                if (solicitacoesSelecionadasOS.length > 0) {
+                    var solicitacoesAfetadas = {};
+                    solicitacoesSelecionadasOS.forEach(function(sel) {
+                        if (!solicitacoesAfetadas[sel.solicitacaoId]) {
+                            solicitacoesAfetadas[sel.solicitacaoId] = [];
+                        }
+                        solicitacoesAfetadas[sel.solicitacaoId].push(sel.itemIndex);
+                    });
+
+                    for (var solId in solicitacoesAfetadas) {
+                        var sol = window.solicitacoesData.find(function(s) { return s.id === solId; });
+                        if (sol) {
+                            var novosItens = sol.itens.map(function(it, idx) {
+                                if (solicitacoesAfetadas[solId].includes(idx)) {
+                                    return { ...it, status: 'Em OS', osId: osRef.id };
+                                }
+                                return it;
+                            });
+                            var todosAtendidos = novosItens.every(function(it) { return it.status === 'Atendido' || it.status === 'Em OS'; });
+                            await window.updateDoc(window.doc(window.db, "mob_solicitacoes", solId), {
+                                itens: novosItens,
+                                statusGeral: todosAtendidos ? 'Parcial' : 'Pendente',
+                                osVinculada: osRef.id
+                            });
+                        }
+                    }
+                }
+
                 currentOrderStockItems = [];
+                solicitacoesSelecionadasOS = [];
                 renderSelectedItems();
                 closeModal('modal-maintenance');
                 document.getElementById('m-desc').value = '';
@@ -931,6 +1637,32 @@
                     dataConclusao: dateStr,
                     relatorio: relatorio
                 });
+
+                // Atualiza solicitações vinculadas: marca itens como Atendidos
+                var solsDaFilial = window.solicitacoesData.filter(function(s) { 
+                    return s.filialId === order.filialId; 
+                });
+                for (var j = 0; j < solsDaFilial.length; j++) {
+                    var sol = solsDaFilial[j];
+                    var temItemNestaOS = false;
+                    var novosItens = sol.itens.map(function(it) {
+                        if (it.osId === id && it.status === 'Em OS') {
+                            temItemNestaOS = true;
+                            return { ...it, status: 'Atendido' };
+                        }
+                        return it;
+                    });
+                    if (temItemNestaOS) {
+                        var todosAtendidos = novosItens.every(function(it) { 
+                            return it.status === 'Atendido'; 
+                        });
+                        await window.updateDoc(window.doc(window.db, "mob_solicitacoes", sol.id), {
+                            itens: novosItens,
+                            statusGeral: todosAtendidos ? 'Concluido' : 'Parcial'
+                        });
+                    }
+                }
+
                 closeModal('modal-complete');
                 showToast('Serviço concluído e estoque atualizado!');
             } catch (err) {
@@ -1017,7 +1749,7 @@
 
             filteredData.forEach(function(s) {
                 var isLow = s.qtd <= s.min;
-                tbody.innerHTML += '<tr class="hover:bg-slate-50 fade-in"><td class="p-3 font-semibold text-slate-800">' + s.nome + '</td><td class="p-3 text-slate-500">' + s.categoria + '</td><td class="p-3 text-center font-bold ' + (isLow ? 'text-rose-600' : 'text-slate-800') + '">' + s.qtd + '</td><td class="p-3 text-center text-slate-500">' + s.min + '</td><td class="p-3 text-center">' + (isLow ? '<span class="bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded text-[10px]">🚨 REPOR</span>' : '<span class="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded text-[10px]">✅ OK</span>') + '</td><td class="p-3 text-right space-x-2"><button onclick="openStockModal(\'' + s.id + '\')" class="text-indigo-600 font-semibold hover:underline">Editar</button><span class="text-slate-300">|</span><button onclick="deleteDocItem(\'mob_estoque\', \'' + s.id + '\')" class="text-rose-500 font-semibold">Excluir</button></td></tr>';
+                tbody.innerHTML += '<tr class="hover:bg-slate-50 fade-in"><td class="p-3 font-semibold text-slate-800">' + s.nome + '</td><td class="p-3 text-slate-500">' + s.categoria + '</td><td class="p-3 text-center font-bold ' + (isLow ? 'text-rose-600' : 'text-slate-800') + '">' + s.qtd + '</td><td class="p-3 text-center text-slate-500">' + s.min + '</td><td class="p-3 text-center">' + (isLow ? '<span class="bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded text-[10px]">🚨 REPOR</span>' : '<span class="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded text-[10px]">✅ OK</span>') + '</td><td class="p-3 text-right space-x-2"><button onclick="openStockModal(\'' + s.id + '\')" class="text-indigo-600 font-semibold hover:underline">Editar</button><span class="text-slate-300">|</span><button onclick="deleteDocItem(\'mob_estoque\', \' + s.id + ')" class="text-rose-500 font-semibold">Excluir</button></td></tr>';
 
                 if (isLow) {
                     emAlerta = true;
@@ -1104,7 +1836,7 @@
             if (!grid) return;
             grid.innerHTML = '';
             window.attachmentData.forEach(function(a) {
-                grid.innerHTML += '<div class="bg-white p-4 rounded-xl shadow-sm border space-y-2"><span class="text-[10px] font-bold text-mob-teal bg-slate-900 px-2 py-0.5 rounded">' + a.filialId + '</span><h4 class="font-bold text-xs text-slate-800">' + a.titulo + '</h4><a href="' + a.url + '" target="_blank" class="text-indigo-600 hover:underline text-xs flex items-center gap-1"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Link / Pasta Fotos</a><button onclick="deleteDocItem(\'mob_anexos\', \'' + a.id + '\')" class="text-rose-500 text-xs font-semibold">Excluir</button></div>';
+                grid.innerHTML += '<div class="bg-white p-4 rounded-xl shadow-sm border space-y-2"><span class="text-[10px] font-bold text-mob-teal bg-slate-900 px-2 py-0.5 rounded">' + a.filialId + '</span><h4 class="font-bold text-xs text-slate-800">' + a.titulo + '</h4><a href="' + a.url + '" target="_blank" class="text-indigo-600 hover:underline text-xs flex items-center gap-1"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Link / Pasta Fotos</a><button onclick="deleteDocItem(\'mob_anexos\', \' + a.id + ')" class="text-rose-500 text-xs font-semibold">Excluir</button></div>';
             });
         }
 
@@ -1144,7 +1876,11 @@
         }
 
         function openModal(id) { 
-            if(id === 'modal-maintenance') populateStockSelect();
+            if(id === 'modal-maintenance') {
+                populateStockSelect();
+                solicitacoesSelecionadasOS = [];
+                carregarSolicitacoesParaOS();
+            }
             document.getElementById(id).classList.remove('hidden'); 
         }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
